@@ -209,9 +209,16 @@ export default function App() {
 
   // REQUIREMENT 6: Realtime Synchronization (Mobile Phone <-> PC <-> Browser Tabs)
   useEffect(() => {
-    // 1. Initial sync with server state
+    // 1. Initial sync with server state (safeguarded for static deployment hosts like Netlify)
     fetch('/api/state')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) return null;
+        const ct = res.headers.get('content-type');
+        if (ct && ct.includes('application/json')) {
+          return res.json();
+        }
+        return null;
+      })
       .then(serverData => {
         if (serverData) {
           if (Array.isArray(serverData.records) && serverData.records.length > 0) setP2hRecords(serverData.records);
@@ -221,7 +228,7 @@ export default function App() {
         }
       })
       .catch(() => {
-        // standalone mode fallback
+        // Standalone client mode fallback (Netlify / Vercel / Static hosting)
       });
 
     // 2. Subscribe to realtime updates emitted by any device
