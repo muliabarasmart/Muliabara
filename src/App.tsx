@@ -46,15 +46,15 @@ import {
 import { playTriggerSound, playSuccessChime } from './utils/audio';
 
 const STORAGE_KEYS = {
-  VEHICLES: 'jac_t9_vehicles_v5',
-  RECORDS: 'jac_t9_p2h_records_v5',
-  LOGS: 'jac_t9_maint_logs_v5',
-  USERS: 'jac_t9_users_v5',
-  CURRENT_USER: 'jac_t9_curr_user_v5',
-  ACTIVE_USER_ID: 'jac_t9_active_user_id_v5',
-  SETTINGS: 'jac_t9_settings_v5',
-  NOTIFICATIONS: 'jac_t9_notifs_v5',
-  IS_LOGGED_IN: 'jac_t9_is_logged_in_v5'
+  VEHICLES: 'jac_t9_vehicles_v6',
+  RECORDS: 'jac_t9_p2h_records_v6',
+  LOGS: 'jac_t9_maint_logs_v6',
+  USERS: 'jac_t9_users_v6',
+  CURRENT_USER: 'jac_t9_curr_user_v6',
+  ACTIVE_USER_ID: 'jac_t9_active_user_id_v6',
+  SETTINGS: 'jac_t9_settings_v6',
+  NOTIFICATIONS: 'jac_t9_notifs_v6',
+  IS_LOGGED_IN: 'jac_t9_is_logged_in_v6'
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -85,8 +85,15 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export default function App() {
-  // Login State - Default directly to TRUE so user enters the application immediately
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(true);
+  // Login State - Default to FALSE so opening Netlify requires passing through LoginView
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN);
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // Vehicles State
   const [vehicles, setVehicles] = useState<VehicleUnit[]>(() => {
@@ -99,7 +106,7 @@ export default function App() {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.RECORDS);
       const parsed = saved ? JSON.parse(saved) : INITIAL_P2H_RECORDS;
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         return Array.from(new Map(parsed.map(r => [r.id, r])).values());
       }
     } catch {
@@ -284,11 +291,12 @@ export default function App() {
     document.body.style.fontFamily = `'${settings.fontFamily}', system-ui, sans-serif`;
   }, [settings.fontFamily]);
 
-  // Handler: Login Success (Requirement 4 & 1)
+  // Handler: Login Success
   const handleLoginSuccess = (user?: UserProfile) => {
     const safeUser = (user && user.id && user.role) ? user : DEFAULT_ADMIN_USER;
     localStorage.setItem(STORAGE_KEYS.ACTIVE_USER_ID, safeUser.id);
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(safeUser));
+    localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, 'true');
     setCurrentUser(safeUser);
     setIsLoggedIn(true);
     playTriggerSound();
@@ -296,6 +304,7 @@ export default function App() {
 
   // Handler: Logout
   const handleLogout = () => {
+    localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, 'false');
     setIsLoggedIn(false);
     playTriggerSound();
   };
