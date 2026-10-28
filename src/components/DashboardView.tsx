@@ -121,12 +121,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return daysArr;
   }, [daysInMonth, selectedMonth, selectedYear, filteredRecords]);
 
-  // Max scale for chart rendering
+  // Max scale for chart rendering - guarantees headroom for 88.02 kWh CATL battery charges
   const maxKwhInMonth = useMemo(() => {
     const maxKwh = Math.max(...monthlyData.map(d => d.kwh), 10);
     const maxChg = Math.max(...monthlyData.map(d => d.chargingKwh), 10);
-    const max = Math.max(maxKwh, maxChg);
-    return Math.ceil(max * 1.2);
+    const max = Math.max(maxKwh, maxChg, 88);
+    return Math.ceil((max * 1.15) / 10) * 10;
   }, [monthlyData]);
 
   const maxKmInMonth = useMemo(() => {
@@ -530,9 +530,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                     monthlyData.forEach((d, idx) => {
                       const x = padLeft + idx * stepX;
-                      const yKwh = padTop + graphH - (d.kwh / (maxKwhInMonth || 1)) * graphH;
-                      const yKm = padTop + graphH - (d.km / (maxKmInMonth || 1)) * graphH;
-                      const yChg = padTop + graphH - (d.chargingKwh / (maxKwhInMonth || 1)) * graphH;
+                      const rawYKwh = padTop + graphH - (d.kwh / (maxKwhInMonth || 1)) * graphH;
+                      const rawYKm = padTop + graphH - (d.km / (maxKmInMonth || 1)) * graphH;
+                      const rawYChg = padTop + graphH - (d.chargingKwh / (maxKwhInMonth || 1)) * graphH;
+
+                      // Strict boundary clamping so lines stay beautifully inside chart bounds
+                      const yKwh = Math.max(padTop + 10, Math.min(padTop + graphH, rawYKwh));
+                      const yKm = Math.max(padTop + 10, Math.min(padTop + graphH, rawYKm));
+                      const yChg = Math.max(padTop + 10, Math.min(padTop + graphH, rawYChg));
 
                       kwhPoints.push({ x, y: yKwh, day: d.dayNumber, val: d.kwh, records: d.records });
                       kmPoints.push({ x, y: yKm, day: d.dayNumber, val: d.km, records: d.records });
@@ -738,8 +743,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                 />
                               )}
 
-                              {/* Floating Badge with Exact Numbers */}
-                              <g transform={`translate(${pt.x}, ${Math.min(pt.y, kmPt.y, chgPt.y) - 18})`}>
+                              {/* Floating Badge with Exact Numbers (Safely clamped) */}
+                              <g transform={`translate(${pt.x}, ${Math.max(padTop + 12, Math.min(pt.y, kmPt.y, chgPt.val > 0 ? chgPt.y : pt.y) - 18)})`}>
                                 <rect
                                   x="-48"
                                   y="-12"

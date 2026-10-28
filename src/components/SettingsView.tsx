@@ -75,7 +75,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   currentUser,
   onUpdateSettings
 }) => {
-  const isAdmin = !currentUser || currentUser.role === 'admin';
+  const isAdmin = !currentUser || currentUser.role === 'admin' || currentUser.role === 'Master Admin';
 
   // State with LocalStorage Fallback for Icon & Sound Persistence (Requirement 7 & 9)
   const [primaryColor, setPrimaryColor] = useState(settings.primaryColor || '#0284c7');

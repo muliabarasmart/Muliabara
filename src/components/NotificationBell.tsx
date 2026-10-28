@@ -34,13 +34,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  // Deduplicate notifications by ID to prevent ghost/excess count bugs
+  // Preserve all individual notifications and ensure each has a unique key
   const uniqueNotifications = useMemo(() => {
-    const map = new Map<string, NotificationItem>();
-    (notifications || []).forEach(n => {
-      if (n && n.id) map.set(n.id, n);
-    });
-    return Array.from(map.values());
+    return (notifications || []).map((n, idx) => ({
+      ...n,
+      id: n.id || `notif_${idx}_${Date.now()}`
+    }));
   }, [notifications]);
 
   const unreadCount = useMemo(() => {

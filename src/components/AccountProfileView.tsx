@@ -223,7 +223,10 @@ export const AccountProfileView: React.FC<AccountProfileViewProps> = ({
 
   const handleSaveAccount = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName.trim() || !formNik.trim()) return;
+    if (!formName.trim() || !formNik.trim()) {
+      alert('Nama lengkap dan NIK wajib diisi.');
+      return;
+    }
 
     // Security check: non-admins can only edit themselves
     if (!isAdmin && editingUserId && editingUserId !== currentUser.id) {
@@ -237,42 +240,55 @@ export const AccountProfileView: React.FC<AccountProfileViewProps> = ({
 
     const cleanUsername = (formUsername.trim() || formNik.trim().replace(/[^a-zA-Z0-9_-]/g, '')).toLowerCase();
 
+    // Check duplicate username or NIK on other users
+    const isDuplicate = allUsers.some(
+      u => u && u.id !== editingUserId && (
+        (u.username && u.username.toLowerCase() === cleanUsername) ||
+        (u.nik && u.nik.toLowerCase() === formNik.trim().toLowerCase())
+      )
+    );
+
+    if (isDuplicate) {
+      alert(`Username (@${cleanUsername}) atau NIK (${formNik.trim()}) sudah terdaftar pada akun lain. Mohon gunakan data yang unik.`);
+      return;
+    }
+
     if (editingUserId) {
       const updated: UserProfile = {
         id: editingUserId,
-        name: formName,
+        name: formName.trim(),
         username: cleanUsername,
-        nik: formNik,
-        password: formPassword,
+        nik: formNik.trim(),
+        password: formPassword || 'password123',
         role: formRole,
-        department: formDepartment,
-        phone: formPhone,
-        email: formEmail || `${cleanUsername}@sunmobility.com`,
-        simperNumber: formSimperNumber,
+        department: formDepartment.trim(),
+        phone: formPhone.trim(),
+        email: formEmail.trim() || `${cleanUsername}@muliabara.com`,
+        simperNumber: formSimperNumber.trim(),
         simperExpiry: formSimperExpiry,
         idCardExpiry: formIdCardExpiry,
         signatureDataUrl: formSignature
       };
       onUpdateUser(updated);
-      setAlertMsg(`Akun ${updated.name} (@${updated.username}) berhasil diperbarui!`);
+      setAlertMsg(`Akun ${updated.name} (${updated.role}) berhasil diperbarui!`);
     } else {
       const newUser: UserProfile = {
-        id: `user_${Date.now()}`,
-        name: formName,
+        id: `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        name: formName.trim(),
         username: cleanUsername,
-        nik: formNik,
-        password: formPassword,
+        nik: formNik.trim(),
+        password: formPassword || 'password123',
         role: formRole,
-        department: formDepartment,
-        phone: formPhone,
-        email: formEmail || `${cleanUsername}@sunmobility.com`,
-        simperNumber: formSimperNumber,
+        department: formDepartment.trim(),
+        phone: formPhone.trim(),
+        email: formEmail.trim() || `${cleanUsername}@muliabara.com`,
+        simperNumber: formSimperNumber.trim(),
         simperExpiry: formSimperExpiry,
         idCardExpiry: formIdCardExpiry,
         signatureDataUrl: formSignature
       };
       onAddUser(newUser);
-      setAlertMsg(`Akun baru ${newUser.name} (@${newUser.username}) berhasil didaftarkan!`);
+      setAlertMsg(`Akun baru ${newUser.name} (${newUser.role}) berhasil didaftarkan dan disinkronkan!`);
     }
 
     setIsModalOpen(false);

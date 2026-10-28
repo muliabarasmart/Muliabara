@@ -143,8 +143,8 @@ export const P2HFormEditor: React.FC<P2HFormEditorProps> = ({
     initialForm?.mechanicRecommendation?.signatureUrl || (isMechanicUser ? safeUser.signatureDataUrl : undefined)
   );
 
-  // Requirement 3: Persetujuan Foreman default pending saat Driver membuat form, baru terisi setelah di-approve
-  const isForemanOrAdmin = safeUser.role === 'foreman' || safeUser.role === 'admin';
+  // Persetujuan Foreman / Pengawas / Admin default pending saat Driver membuat form
+  const isForemanOrAdmin = safeUser.role === 'foreman' || safeUser.role === 'Pengawas' || safeUser.role === 'admin' || safeUser.role === 'Master Admin';
   const [foremanDecision, setForemanDecision] = useState<'pending' | 'approved' | 'rejected'>(
     initialForm?.foremanApproval?.status || (isForemanOrAdmin ? 'approved' : 'pending')
   );

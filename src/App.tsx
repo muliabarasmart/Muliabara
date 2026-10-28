@@ -41,7 +41,8 @@ import {
   BarChart3,
   Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  RefreshCw
 } from 'lucide-react';
 import { playTriggerSound, playSuccessChime } from './utils/audio';
 
@@ -214,32 +215,15 @@ export default function App() {
     }
   }, [isAdmin, activeNav]);
 
-  // REQUIREMENT 6: Realtime Synchronization (Mobile Phone <-> PC <-> Browser Tabs)
-  useEffect(() => {
-    // 1. Initial sync with server state (safeguarded for static deployment hosts like Netlify)
-    fetch(`${API_BASE_URL}/api/state`)
-      .then(res => {
-        if (!res.ok) return null;
-        const ct = res.headers.get('content-type');
-        if (ct && ct.includes('application/json')) {
-          return res.json();
-        }
-        return null;
-      })
-      .then(serverData => {
-        if (serverData) {
-          if (Array.isArray(serverData.records) && serverData.records.length > 0) setP2hRecords(serverData.records);
-          if (Array.isArray(serverData.vehicles) && serverData.vehicles.length > 0) setVehicles(serverData.vehicles);
-          if (Array.isArray(serverData.notifications) && serverData.notifications.length > 0) setNotifications(serverData.notifications);
-          if (serverData.settings && typeof serverData.settings === 'object' && serverData.settings.primaryColor) setSettings(serverData.settings);
-        }
-      })
-      .catch(() => {
-        // Standalone client mode fallback (Netlify / Vercel / Static hosting)
-      });
+  // Global Realtime Cloud Sync State (Netlify <-> Google AI Studio <-> Mobile <-> PC)
+  const [syncStatus, setSyncStatus] = useState<'connected' | 'syncing' | 'offline'>('connected');
+  const [lastSyncTime, setLastSyncTime] = useState<string>('');
+  const [isManualSyncing, setIsManualSyncing] = useState<boolean>(false);
 
-    // 2. Subscribe to realtime updates emitted by any device
-    const unsubscribe = realtimeSync.subscribe((payload) => {
+  // Subscribe to Realtime Updates & Connection Status
+  useEffect(() => {
+    // 1. Subscribe to realtime updates emitted by any device
+    const unsubscribeData = realtimeSync.subscribe((payload) => {
       if (Array.isArray(payload.records) && payload.records.length > 0) setP2hRecords(payload.records);
       if (Array.isArray(payload.vehicles) && payload.vehicles.length > 0) setVehicles(payload.vehicles);
       if (Array.isArray(payload.notifications)) setNotifications(payload.notifications);
@@ -250,7 +234,16 @@ export default function App() {
       if (payload.settings && typeof payload.settings === 'object' && payload.settings.primaryColor) setSettings(payload.settings);
     });
 
-    return unsubscribe;
+    // 2. Subscribe to sync connection status
+    const unsubscribeStatus = realtimeSync.subscribeStatus((status, time) => {
+      setSyncStatus(status);
+      if (time) setLastSyncTime(time);
+    });
+
+    return () => {
+      unsubscribeData();
+      unsubscribeStatus();
+    };
   }, []);
 
   // Sync state with LocalStorage for offline resilience
@@ -406,10 +399,17 @@ export default function App() {
     });
 
     let updatedNotifications: NotificationItem[] = [];
+    let singleApproved = false;
     setNotifications(prev => {
       updatedNotifications = prev.map(n => {
-        const isTarget = notifId ? n.id === notifId : (n.formId === formId && n.type === 'p2h_submitted');
+        // If notifId is specified, match strictly that notification ID
+        // If not, only match the single first pending notification for this form so other rows remain untouched
+        const isTarget = notifId 
+          ? n.id === notifId 
+          : (!singleApproved && n.formId === formId && n.type === 'p2h_submitted');
+        
         if (isTarget) {
+          singleApproved = true;
           return {
             ...n,
             read: true,
@@ -494,7 +494,9 @@ export default function App() {
   const handleAddUser = (newUser: UserProfile) => {
     const updated = [newUser, ...allUsers];
     setAllUsers(updated);
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updated));
     realtimeSync.pushUpdate({ users: updated });
+    playTriggerSound();
   };
 
   const handleUpdateUser = (updatedUser: UserProfile) => {
@@ -626,21 +628,32 @@ export default function App() {
             {/* Realtime Status Indicator & Manual Sync Button */}
             <button
               type="button"
-              onClick={() => {
-                realtimeSync.pushUpdate({
+              onClick={async () => {
+                setIsManualSyncing(true);
+                await realtimeSync.forceSyncNow({
                   records: p2hRecords,
                   vehicles: vehicles,
                   users: allUsers,
                   notifications: notifications,
                   settings: settings
                 });
-                alert('Tersinkronisasi! Data berhasil disinkronkan ke seluruh sesi terhubung (Netlify & Google AI Studio).');
+                setTimeout(() => {
+                  setIsManualSyncing(false);
+                }, 800);
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-[10px] text-white font-mono shadow-2xs backdrop-blur-md border border-emerald-400/40 cursor-pointer transition-colors"
-              title="Klik untuk sinkronisasi manual data secara real-time"
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono shadow-2xs backdrop-blur-md border cursor-pointer transition-all ${
+                syncStatus === 'connected'
+                  ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-white border-emerald-400/40'
+                  : syncStatus === 'syncing' || isManualSyncing
+                  ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-400/40'
+                  : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border-rose-400/40'
+              }`}
+              title={`Status Cloud Sync: ${syncStatus === 'connected' ? 'Aktif (Real-Time)' : syncStatus} · Terakhir: ${lastSyncTime || 'Baru saja'}. Klik untuk sinkronisasi paksa.`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="font-bold">Sync Aktif</span>
+              <RefreshCw className={`w-3 h-3 ${isManualSyncing || syncStatus === 'syncing' ? 'animate-spin text-amber-300' : 'text-emerald-400'}`} />
+              <span className="font-bold hidden xs:inline">
+                {isManualSyncing ? 'Menyinkronkan...' : syncStatus === 'connected' ? 'Sync Aktif' : 'Offline'}
+              </span>
             </button>
 
             {/* Notification Bell */}
