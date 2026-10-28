@@ -44,7 +44,8 @@ export const P2HLogView: React.FC<P2HLogViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUnit, setSelectedUnit] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   // Filtered records
@@ -52,7 +53,17 @@ export const P2HLogView: React.FC<P2HLogViewProps> = ({
     return records.filter(r => {
       const matchUnit = selectedUnit === 'all' || r.unitNumber === selectedUnit;
       const matchStatus = selectedStatus === 'all' || r.overallStatus === selectedStatus;
-      const matchDate = !selectedDate || r.date === selectedDate;
+      
+      const recordDate = (r.date || '').split('T')[0].trim();
+      let matchDate = true;
+      if (startDate && endDate) {
+        matchDate = recordDate >= startDate && recordDate <= endDate;
+      } else if (startDate) {
+        matchDate = recordDate === startDate;
+      } else if (endDate) {
+        matchDate = recordDate <= endDate;
+      }
+
       const matchQuery = 
         !searchQuery ||
         r.operatorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -63,7 +74,7 @@ export const P2HLogView: React.FC<P2HLogViewProps> = ({
 
       return matchUnit && matchStatus && matchDate && matchQuery;
     });
-  }, [records, selectedUnit, selectedStatus, selectedDate, searchQuery]);
+  }, [records, selectedUnit, selectedStatus, startDate, endDate, searchQuery]);
 
   // Aggregate stats
   const stats = useMemo(() => {
@@ -234,18 +245,29 @@ export const P2HLogView: React.FC<P2HLogViewProps> = ({
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:col-span-1">
             <input
               type="date"
-              value={selectedDate}
-              onChange={e => setSelectedDate(e.target.value)}
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
               onClick={e => e.currentTarget.showPicker?.()}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono cursor-pointer"
+              title="Dari Tanggal"
+              className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono text-xs cursor-pointer"
             />
-            {selectedDate && (
+            <span className="text-slate-400 font-bold text-xs shrink-0">s/d</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              onClick={e => e.currentTarget.showPicker?.()}
+              title="Sampai Tanggal"
+              className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono text-xs cursor-pointer"
+            />
+            {(startDate || endDate) && (
               <button
-                onClick={() => setSelectedDate('')}
-                className="px-2 py-2 text-xs text-slate-500 hover:text-slate-800 bg-slate-100 rounded-xl cursor-pointer"
+                type="button"
+                onClick={() => { setStartDate(''); setEndDate(''); }}
+                className="px-2 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 bg-slate-100 rounded-xl cursor-pointer shrink-0"
                 title="Reset Tanggal"
               >
                 Reset

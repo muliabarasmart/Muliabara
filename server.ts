@@ -11,6 +11,17 @@ const PORT = 3000;
 
 app.use(express.json({ limit: '20mb' }));
 
+// Enable CORS for Netlify <-> Google AI Studio Cross-Origin Realtime Synchronization
+app.use((req: Request, res: Response, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // In-Memory Real-time authoritative state for Phone <-> PC synchronization
 interface ServerState {
   records: any[];

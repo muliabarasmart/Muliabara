@@ -123,8 +123,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Max scale for chart rendering
   const maxKwhInMonth = useMemo(() => {
-    const max = Math.max(...monthlyData.map(d => d.kwh), 10);
-    return Math.ceil(max * 1.25);
+    const maxKwh = Math.max(...monthlyData.map(d => d.kwh), 10);
+    const maxChg = Math.max(...monthlyData.map(d => d.chargingKwh), 10);
+    const max = Math.max(maxKwh, maxChg);
+    return Math.ceil(max * 1.2);
   }, [monthlyData]);
 
   const maxKmInMonth = useMemo(() => {
@@ -524,14 +526,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     // Compute points for daily curves
                     const kwhPoints: { x: number; y: number; day: number; val: number; records: any[] }[] = [];
                     const kmPoints: { x: number; y: number; day: number; val: number; records: any[] }[] = [];
+                    const chgPoints: { x: number; y: number; day: number; val: number; records: any[] }[] = [];
 
                     monthlyData.forEach((d, idx) => {
                       const x = padLeft + idx * stepX;
                       const yKwh = padTop + graphH - (d.kwh / (maxKwhInMonth || 1)) * graphH;
                       const yKm = padTop + graphH - (d.km / (maxKmInMonth || 1)) * graphH;
+                      const yChg = padTop + graphH - (d.chargingKwh / (maxKwhInMonth || 1)) * graphH;
 
                       kwhPoints.push({ x, y: yKwh, day: d.dayNumber, val: d.kwh, records: d.records });
                       kmPoints.push({ x, y: yKm, day: d.dayNumber, val: d.km, records: d.records });
+                      chgPoints.push({ x, y: yChg, day: d.dayNumber, val: d.chargingKwh, records: d.records });
                     });
 
                     // Build smooth SVG paths
@@ -549,9 +554,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                     const kwhLinePath = buildSmoothPath(kwhPoints);
                     const kmLinePath = buildSmoothPath(kmPoints);
+                    const chgLinePath = buildSmoothPath(chgPoints);
 
                     const kwhAreaPath = `${kwhLinePath} L ${padLeft + (daysInMonth - 1) * stepX},${padTop + graphH} L ${padLeft},${padTop + graphH} Z`;
                     const kmAreaPath = `${kmLinePath} L ${padLeft + (daysInMonth - 1) * stepX},${padTop + graphH} L ${padLeft},${padTop + graphH} Z`;
+                    const chgAreaPath = `${chgLinePath} L ${padLeft + (daysInMonth - 1) * stepX},${padTop + graphH} L ${padLeft},${padTop + graphH} Z`;
 
                     return (
                       <svg viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="xMidYMid meet" className="w-full h-auto max-h-[300px] sm:max-h-[250px] overflow-visible font-sans select-none">
@@ -571,15 +578,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               <feMergeNode in="SourceGraphic" />
                             </feMerge>
                           </filter>
+                          <filter id="neon-orange-glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+                            <feMerge>
+                              <feMergeNode in="blur" />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                          </filter>
 
                           {/* Gradient fills */}
                           <linearGradient id="kwh-area-grad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.25" />
+                            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.2" />
                             <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
                           </linearGradient>
                           <linearGradient id="km-area-grad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
                             <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                          </linearGradient>
+                          <linearGradient id="chg-area-grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.2" />
+                            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.0" />
                           </linearGradient>
                         </defs>
 
@@ -603,7 +621,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {/* Day Column Slots & Highlights */}
                         {monthlyData.map((d, i) => {
                           const x = padLeft + i * stepX;
-                          const hasData = d.kwh > 0 || d.km > 0;
+                          const hasData = d.kwh > 0 || d.km > 0 || d.chargingKwh > 0;
                           const isHovered = hoveredDay === d.dayNumber;
 
                           return (
@@ -626,19 +644,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                 strokeWidth="1"
                               />
 
-                              {/* EV Charging Bar Inside Slot */}
-                              {d.chargingKwh > 0 && (
-                                <rect
-                                  x={x - 4}
-                                  y={padTop + graphH - (d.chargingKwh / (maxKwhInMonth || 1)) * graphH}
-                                  width={8}
-                                  height={(d.chargingKwh / (maxKwhInMonth || 1)) * graphH}
-                                  rx="3"
-                                  fill="#f59e0b"
-                                  opacity="0.8"
-                                />
-                              )}
-
                               {/* Day Label at Bottom */}
                               <text
                                 x={x}
@@ -655,11 +660,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           );
                         })}
 
-                        {/* Area Gradient Under Neon Curves */}
+                        {/* Area Gradients Under Neon Curves */}
+                        <path d={chgAreaPath} fill="url(#chg-area-grad)" />
                         <path d={kmAreaPath} fill="url(#km-area-grad)" />
                         <path d={kwhAreaPath} fill="url(#kwh-area-grad)" />
 
                         {/* Neon Smooth Line Curves */}
+                        <path
+                          d={chgLinePath}
+                          fill="none"
+                          stroke="#f59e0b"
+                          strokeWidth="2.5"
+                          filter="url(#neon-orange-glow)"
+                        />
                         <path
                           d={kmLinePath}
                           fill="none"
@@ -678,45 +691,63 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {/* Data Points on Curves for Days with Telemetry */}
                         {kwhPoints.map((pt, i) => {
                           const kmPt = kmPoints[i];
-                          const hasData = pt.val > 0 || kmPt.val > 0;
+                          const chgPt = chgPoints[i];
+                          const hasData = pt.val > 0 || kmPt.val > 0 || chgPt.val > 0;
                           if (!hasData) return null;
 
                           const isHovered = hoveredDay === pt.day;
 
                           return (
                             <g key={pt.day} className="cursor-pointer" onClick={() => setHoveredDay(pt.day)}>
+                              {/* EV Charging Point (Orange Neon Dot) */}
+                              {chgPt.val > 0 && (
+                                <circle
+                                  cx={chgPt.x}
+                                  cy={chgPt.y}
+                                  r={isHovered ? "7" : "5"}
+                                  fill="#d97706"
+                                  stroke="#ffffff"
+                                  strokeWidth="2"
+                                  className="transition-all drop-shadow-[0_0_6px_#fbbf24]"
+                                />
+                              )}
+
                               {/* Energy Point (Blue Neon Dot) */}
-                              <circle
-                                cx={pt.x}
-                                cy={pt.y}
-                                r={isHovered ? "7" : "5"}
-                                fill="#0284c7"
-                                stroke="#ffffff"
-                                strokeWidth="2"
-                                className="transition-all drop-shadow-[0_0_6px_#38bdf8]"
-                              />
+                              {pt.val > 0 && (
+                                <circle
+                                  cx={pt.x}
+                                  cy={pt.y}
+                                  r={isHovered ? "7" : "5"}
+                                  fill="#0284c7"
+                                  stroke="#ffffff"
+                                  strokeWidth="2"
+                                  className="transition-all drop-shadow-[0_0_6px_#38bdf8]"
+                                />
+                              )}
 
                               {/* Distance Point (Green Neon Dot) */}
-                              <circle
-                                cx={kmPt.x}
-                                cy={kmPt.y}
-                                r={isHovered ? "7" : "5"}
-                                fill="#059669"
-                                stroke="#ffffff"
-                                strokeWidth="2"
-                                className="transition-all drop-shadow-[0_0_6px_#34d399]"
-                              />
+                              {kmPt.val > 0 && (
+                                <circle
+                                  cx={kmPt.x}
+                                  cy={kmPt.y}
+                                  r={isHovered ? "7" : "5"}
+                                  fill="#059669"
+                                  stroke="#ffffff"
+                                  strokeWidth="2"
+                                  className="transition-all drop-shadow-[0_0_6px_#34d399]"
+                                />
+                              )}
 
                               {/* Floating Badge with Exact Numbers */}
-                              <g transform={`translate(${pt.x}, ${Math.min(pt.y, kmPt.y) - 18})`}>
+                              <g transform={`translate(${pt.x}, ${Math.min(pt.y, kmPt.y, chgPt.y) - 18})`}>
                                 <rect
-                                  x="-42"
+                                  x="-48"
                                   y="-12"
-                                  width="84"
+                                  width="96"
                                   height="18"
                                   rx="5"
                                   fill="#0f172a"
-                                  stroke="#38bdf8"
+                                  stroke={chgPt.val > 0 ? "#f59e0b" : "#38bdf8"}
                                   strokeWidth="1"
                                   opacity="0.95"
                                 />
@@ -725,12 +756,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                   y="0"
                                   textAnchor="middle"
                                   dominantBaseline="central"
-                                  fill="#38bdf8"
-                                  fontSize="9.5"
+                                  fill={chgPt.val > 0 ? "#fbbf24" : "#38bdf8"}
+                                  fontSize="9"
                                   fontWeight="800"
                                   className="font-mono select-none"
                                 >
-                                  {pt.val} kWh · {kmPt.val} KM
+                                  {pt.val}kWh · {kmPt.val}KM{chgPt.val > 0 ? ` · ${chgPt.val}⚡` : ''}
                                 </text>
                               </g>
                             </g>

@@ -127,6 +127,16 @@ export interface VehicleUnit {
   assignedDriver?: string;
   location: string;
   skoExpiry: string;
+  photoUrl?: string;
+}
+
+export interface RolePermissionMatrix {
+  createP2H: { 'Master Admin': boolean; Pengawas: boolean; Driver: boolean };
+  telemetryInput: { 'Master Admin': boolean; Pengawas: boolean; Driver: boolean };
+  officialApproval: { 'Master Admin': boolean; Pengawas: boolean; Driver: boolean };
+  fleetManagement: { 'Master Admin': boolean; Pengawas: boolean; Driver: boolean };
+  accountManagement: { 'Master Admin': boolean; Pengawas: boolean; Driver: boolean };
+  pdfExport: { 'Master Admin': boolean; Pengawas: boolean; Driver: boolean };
 }
 
 export interface MaintenanceServiceItem {

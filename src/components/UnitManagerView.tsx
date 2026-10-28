@@ -56,9 +56,29 @@ export const UnitManagerView: React.FC<UnitManagerViewProps> = ({
   const [assignedDriver, setAssignedDriver] = useState('');
   const [location, setLocation] = useState('Pit Utara - Mining Sector A');
   const [skoExpiry, setSkoExpiry] = useState('2027-06-30');
+  const [photoUrl, setPhotoUrl] = useState('');
 
   // Delete Confirm Modal State
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, targetVehId?: string) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        if (targetVehId) {
+          const veh = vehicles.find(v => v.id === targetVehId);
+          if (veh) {
+            onUpdateVehicle({ ...veh, photoUrl: result });
+          }
+        } else {
+          setPhotoUrl(result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Filtered units
   const filteredVehicles = vehicles.filter(v => {
@@ -89,6 +109,7 @@ export const UnitManagerView: React.FC<UnitManagerViewProps> = ({
     setAssignedDriver('');
     setLocation('Central Workshop - Main Yard');
     setSkoExpiry('2027-12-31');
+    setPhotoUrl('');
     setIsModalOpen(true);
   };
 
@@ -109,6 +130,7 @@ export const UnitManagerView: React.FC<UnitManagerViewProps> = ({
     setAssignedDriver(veh.assignedDriver || '');
     setLocation(veh.location);
     setSkoExpiry(veh.skoExpiry);
+    setPhotoUrl(veh.photoUrl || '');
     setIsModalOpen(true);
   };
 
@@ -132,7 +154,8 @@ export const UnitManagerView: React.FC<UnitManagerViewProps> = ({
         status,
         assignedDriver,
         location,
-        skoExpiry
+        skoExpiry,
+        photoUrl
       };
       onUpdateVehicle(updated);
     } else {
@@ -151,7 +174,8 @@ export const UnitManagerView: React.FC<UnitManagerViewProps> = ({
         status,
         assignedDriver,
         location,
-        skoExpiry
+        skoExpiry,
+        photoUrl
       };
       onAddVehicle(newUnit);
     }
@@ -292,17 +316,29 @@ export const UnitManagerView: React.FC<UnitManagerViewProps> = ({
                   </div>
                 </div>
 
-                {/* Truck Photo Asset (Clean without overlays) */}
-                <div className="my-3 rounded-xl overflow-hidden border border-slate-200 relative h-40 bg-slate-100 shadow-2xs group">
+                {/* Truck Photo Asset (Editable photo feature) */}
+                <div className="my-3 rounded-xl overflow-hidden border border-slate-200 relative h-44 bg-slate-900 shadow-2xs group">
                   <img
-                    src="/src/assets/images/jac_t9_ev_pickup_1793024478024.jpg"
-                    alt="JAC T9 EV 4x4 Double Cabin"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    src={veh.photoUrl || "/src/assets/images/jac_t9_ev_pickup_1793024478024.jpg"}
+                    alt={veh.unitNumber}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-95"
                   />
                   <div className="absolute bottom-2 left-2 bg-slate-900/85 backdrop-blur-md text-white px-2.5 py-1 rounded-md text-[10px] font-mono font-bold flex items-center gap-1.5 shadow-xs">
                     <Truck className="w-3.5 h-3.5 text-sky-400" />
-                    <span>JAC T9 EV 4x4 · CATL 88.02 kWh</span>
+                    <span>{veh.unitNumber} · CATL 88.02 kWh</span>
                   </div>
+
+                  {/* Direct Ganti Foto Button */}
+                  <label className="absolute top-2 right-2 bg-slate-900/85 hover:bg-sky-600 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-lg border border-white/20 shadow-md cursor-pointer transition-colors flex items-center gap-1">
+                    <Edit3 className="w-3 h-3 text-sky-300" />
+                    <span>Ganti Foto</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => handlePhotoUpload(e, veh.id)}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
 
                 {/* Specs & Metrics Grid */}
@@ -603,6 +639,46 @@ export const UnitManagerView: React.FC<UnitManagerViewProps> = ({
                     onChange={e => setSkoExpiry(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono"
                   />
+                </div>
+
+                {/* Foto Kendaraan / Unit */}
+                <div className="sm:col-span-2 pt-2 border-t border-slate-100">
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Foto Kendaraan Armada EV (Unggah / Upload Foto)
+                  </label>
+                  <div className="flex flex-col sm:flex-row items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <div className="w-32 h-20 bg-slate-900 rounded-lg overflow-hidden border border-slate-200 shrink-0 relative">
+                      <img
+                        src={photoUrl || "/src/assets/images/jac_t9_ev_pickup_1793024478024.jpg"}
+                        alt="Preview Foto Unit"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1.5 w-full">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer transition-colors">
+                        <Truck className="w-3.5 h-3.5 text-sky-600" />
+                        Pilih File Foto Kendaraan (JPG / PNG)
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={e => handlePhotoUpload(e)}
+                          className="hidden"
+                        />
+                      </label>
+                      {photoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setPhotoUrl('')}
+                          className="text-[11px] text-rose-600 font-semibold hover:underline block"
+                        >
+                          Hapus Foto Khusus (Gunakan Foto Bawaan)
+                        </button>
+                      )}
+                      <p className="text-[10px] text-slate-400">
+                        Foto ini akan ditampilkan pada kartu unit dan laporan inspeksi P2H.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 

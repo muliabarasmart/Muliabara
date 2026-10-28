@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { UserProfile, UserRole } from '../types/p2h';
+import { UserProfile, UserRole, RolePermissionMatrix } from '../types/p2h';
+import { realtimeSync } from '../services/realtimeSync';
 import { 
   User, 
   Shield, 
@@ -37,6 +38,15 @@ interface AccountProfileViewProps {
   onUpdateUser: (updatedUser: UserProfile) => void;
   onDeleteUser: (userId: string) => void;
 }
+
+const DEFAULT_MATRIX: RolePermissionMatrix = {
+  createP2H: { 'Master Admin': true, Pengawas: true, Driver: true },
+  telemetryInput: { 'Master Admin': true, Pengawas: true, Driver: true },
+  officialApproval: { 'Master Admin': true, Pengawas: true, Driver: false },
+  fleetManagement: { 'Master Admin': true, Pengawas: true, Driver: false },
+  accountManagement: { 'Master Admin': true, Pengawas: false, Driver: false },
+  pdfExport: { 'Master Admin': true, Pengawas: true, Driver: true }
+};
 
 export const INITIAL_ACCOUNTS: UserProfile[] = [
   {
@@ -98,6 +108,35 @@ export const AccountProfileView: React.FC<AccountProfileViewProps> = ({
   const isAdmin = safeUser.role === 'admin' || safeUser.role === 'Master Admin';
   // Tabs: 'profile' | 'manage'
   const [activeTab, setActiveTab] = useState<'profile' | 'manage'>('profile');
+
+  // Permission Matrix State
+  const [permissions, setPermissions] = useState<RolePermissionMatrix>(() => {
+    try {
+      const saved = localStorage.getItem('jac_t9_permissions_v5');
+      return saved ? JSON.parse(saved) : DEFAULT_MATRIX;
+    } catch {
+      return DEFAULT_MATRIX;
+    }
+  });
+
+  const togglePermission = (featureKey: keyof RolePermissionMatrix, role: 'Master Admin' | 'Pengawas' | 'Driver') => {
+    if (!isAdmin) {
+      alert('Hanya Master Admin yang berwenang mengubah matriks hak akses.');
+      return;
+    }
+    setPermissions(prev => {
+      const updated = {
+        ...prev,
+        [featureKey]: {
+          ...prev[featureKey],
+          [role]: !prev[featureKey]?.[role]
+        }
+      };
+      localStorage.setItem('jac_t9_permissions_v5', JSON.stringify(updated));
+      realtimeSync.pushUpdate({ permissions: updated } as any);
+      return updated;
+    });
+  };
 
   // Modal State for Add / Edit Account
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -644,67 +683,92 @@ export const AccountProfileView: React.FC<AccountProfileViewProps> = ({
             </table>
           </div>
 
-          {/* REQUIREMENT 4: Matriks Checklist & Hak Akses pada Akun */}
+          {/* REQUIREMENT 4: Interactive Matriks Hak Akses & Checklist Peran */}
           <div className="p-6 bg-white border-t border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-sky-600" />
-                Matriks Hak Akses & Checklist Peran (Master Admin, Pengawas, Driver)
-              </h3>
-              <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                Standar K3 F-QHSE-OPS-MOB-09
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-sky-600" />
+                  Matriks Hak Akses & Checklist Peran (Master Admin, Pengawas, Driver)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Centang / batalkan centang opsi di bawah ini untuk mengatur izin akses modul secara langsung (Khusus Admin).
+                </p>
+              </div>
+
+              <span className="text-[11px] font-mono font-bold text-sky-700 bg-sky-50 px-2.5 py-1 rounded border border-sky-200 shrink-0">
+                {isAdmin ? 'Mode Edit Admin' : 'Mode Read-Only'}
               </span>
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                   <tr>
-                    <th className="py-2.5 px-3">Fitur & Otorisasi Operasional P2H</th>
-                    <th className="py-2.5 px-3 text-center w-28">Master Admin</th>
-                    <th className="py-2.5 px-3 text-center w-28">Pengawas</th>
-                    <th className="py-2.5 px-3 text-center w-28">Driver</th>
+                    <th className="py-3 px-4">Fitur & Otorisasi Operasional P2H</th>
+                    <th className="py-3 px-4 text-center w-32">Master Admin</th>
+                    <th className="py-3 px-4 text-center w-32">Pengawas</th>
+                    <th className="py-3 px-4 text-center w-32">Driver</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                  <tr>
-                    <td className="py-2.5 px-3 font-bold text-slate-900">Pengisian Formulir P2H & Checklist EV</td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 px-3 font-bold text-slate-900">Input Telemetri Odometer & Charging % & Konversi</td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 px-3 font-bold text-slate-900">Persetujuan Resmi (Approval P2H & Tanda Tangan)</td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                    <td className="py-2.5 px-3 text-center text-rose-500 font-bold">X</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 px-3 font-bold text-slate-900">Manajemen Unit Fleet & Status Kendaraan (CRUD)</td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                    <td className="py-2.5 px-3 text-center text-rose-500 font-bold">X</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 px-3 font-bold text-slate-900">Manajemen Akun, Password & Kredensial Pengguna</td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                    <td className="py-2.5 px-3 text-center text-rose-500 font-bold">X</td>
-                    <td className="py-2.5 px-3 text-center text-rose-500 font-bold">X</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 px-3 font-bold text-slate-900">Export & Cetak PDF Resmi F-QHSE-OPS-MOB-09</td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                    <td className="py-2.5 px-3 text-center"><Check className="w-4 h-4 text-emerald-600 mx-auto" /></td>
-                  </tr>
+                  {[
+                    { key: 'createP2H' as const, label: 'Pengisian Formulir P2H & Checklist EV' },
+                    { key: 'telemetryInput' as const, label: 'Input Telemetri Odometer & Charging % & Konversi' },
+                    { key: 'officialApproval' as const, label: 'Persetujuan Resmi (Approval P2H & Tanda Tangan)' },
+                    { key: 'fleetManagement' as const, label: 'Manajemen Unit Fleet & Status Kendaraan (CRUD)' },
+                    { key: 'accountManagement' as const, label: 'Manajemen Akun, Password & Kredensial Pengguna' },
+                    { key: 'pdfExport' as const, label: 'Export & Cetak PDF Resmi F-QHSE-OPS-MOB-09' }
+                  ].map(item => (
+                    <tr key={item.key} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 px-4 font-bold text-slate-900">{item.label}</td>
+                      
+                      {(['Master Admin', 'Pengawas', 'Driver'] as const).map(role => {
+                        const isChecked = Boolean(permissions?.[item.key]?.[role]);
+                        return (
+                          <td key={role} className="py-3 px-4 text-center">
+                            <label className={`inline-flex items-center justify-center gap-1.5 p-1.5 rounded-lg border transition-all cursor-pointer select-none ${
+                              isChecked
+                                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                                : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300'
+                            } ${!isAdmin ? 'pointer-events-none opacity-80' : ''}`}>
+                              <input
+                                type="checkbox"
+                                disabled={!isAdmin}
+                                checked={isChecked}
+                                onChange={() => togglePermission(item.key, role)}
+                                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                              />
+                              <span className="text-[11px] font-bold font-mono">
+                                {isChecked ? 'IZIN' : 'BLOK'}
+                              </span>
+                            </label>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
+
+            {isAdmin && (
+              <div className="p-3 bg-sky-50 border border-sky-200 rounded-xl text-sky-800 text-xs flex items-center justify-between gap-2">
+                <span className="font-semibold">
+                  ✓ Matriks izin akses otomatis tersimpan & tersinkronisasi ke seluruh perangkat.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem('jac_t9_permissions_v5', JSON.stringify(permissions));
+                    alert('Matriks hak akses berhasil diperbarui!');
+                  }}
+                  className="px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg text-xs transition-colors shadow-2xs shrink-0 cursor-pointer"
+                >
+                  Simpan Matriks
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -808,8 +872,12 @@ export const AccountProfileView: React.FC<AccountProfileViewProps> = ({
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-semibold focus:bg-white focus:ring-1 focus:ring-sky-500"
                   >
                     <option value="Master Admin">Master Admin (Akses Penuh & Hak Pengaturan)</option>
+                    <option value="admin">Admin (Administrator System)</option>
                     <option value="Pengawas">Pengawas (Atasan K3 - Review & Approve P2H)</option>
+                    <option value="foreman">Foreman (Supervisor Lapangan)</option>
                     <option value="Driver">Driver (Driver EV - Buat P2H & TTD)</option>
+                    <option value="operator">Operator (Operator Light Vehicle)</option>
+                    <option value="mechanic">Mekanik (Teknisi / Mekanik EV)</option>
                   </select>
                 </div>
 

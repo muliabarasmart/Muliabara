@@ -23,7 +23,7 @@ import { NotificationBell } from './components/NotificationBell';
 import { LoginView } from './components/LoginView';
 import { DashboardView } from './components/DashboardView';
 import { ChargingLogView } from './components/ChargingLogView';
-import { realtimeSync } from './services/realtimeSync';
+import { realtimeSync, API_BASE_URL } from './services/realtimeSync';
 import { 
   ClipboardList, 
   FileText, 
@@ -46,15 +46,15 @@ import {
 import { playTriggerSound, playSuccessChime } from './utils/audio';
 
 const STORAGE_KEYS = {
-  VEHICLES: 'jac_t9_vehicles_v4',
-  RECORDS: 'jac_t9_p2h_records_v4',
-  LOGS: 'jac_t9_maint_logs_v4',
-  USERS: 'jac_t9_users_v4',
-  CURRENT_USER: 'jac_t9_curr_user_v4',
-  ACTIVE_USER_ID: 'jac_t9_active_user_id_v4',
-  SETTINGS: 'jac_t9_settings_v4',
-  NOTIFICATIONS: 'jac_t9_notifs_v4',
-  IS_LOGGED_IN: 'jac_t9_is_logged_in_v4'
+  VEHICLES: 'jac_t9_vehicles_v5',
+  RECORDS: 'jac_t9_p2h_records_v5',
+  LOGS: 'jac_t9_maint_logs_v5',
+  USERS: 'jac_t9_users_v5',
+  CURRENT_USER: 'jac_t9_curr_user_v5',
+  ACTIVE_USER_ID: 'jac_t9_active_user_id_v5',
+  SETTINGS: 'jac_t9_settings_v5',
+  NOTIFICATIONS: 'jac_t9_notifs_v5',
+  IS_LOGGED_IN: 'jac_t9_is_logged_in_v5'
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -210,7 +210,7 @@ export default function App() {
   // REQUIREMENT 6: Realtime Synchronization (Mobile Phone <-> PC <-> Browser Tabs)
   useEffect(() => {
     // 1. Initial sync with server state (safeguarded for static deployment hosts like Netlify)
-    fetch('/api/state')
+    fetch(`${API_BASE_URL}/api/state`)
       .then(res => {
         if (!res.ok) return null;
         const ct = res.headers.get('content-type');
@@ -399,7 +399,8 @@ export default function App() {
     let updatedNotifications: NotificationItem[] = [];
     setNotifications(prev => {
       updatedNotifications = prev.map(n => {
-        if ((notifId && n.id === notifId) || (n.formId === formId && n.type === 'p2h_submitted')) {
+        const isTarget = notifId ? n.id === notifId : (n.formId === formId && n.type === 'p2h_submitted');
+        if (isTarget) {
           return {
             ...n,
             read: true,
@@ -613,11 +614,25 @@ export default function App() {
 
           {/* Right Action Icons */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Realtime Status Indicator */}
-            <div className="hidden lg:flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/15 text-[10px] text-white/90 border border-white/25 font-mono shadow-2xs backdrop-blur-md">
+            {/* Realtime Status Indicator & Manual Sync Button */}
+            <button
+              type="button"
+              onClick={() => {
+                realtimeSync.pushUpdate({
+                  records: p2hRecords,
+                  vehicles: vehicles,
+                  users: allUsers,
+                  notifications: notifications,
+                  settings: settings
+                });
+                alert('Tersinkronisasi! Data berhasil disinkronkan ke seluruh sesi terhubung (Netlify & Google AI Studio).');
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-[10px] text-white font-mono shadow-2xs backdrop-blur-md border border-emerald-400/40 cursor-pointer transition-colors"
+              title="Klik untuk sinkronisasi manual data secara real-time"
+            >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Sync Aktif</span>
-            </div>
+              <span className="font-bold">Sync Aktif</span>
+            </button>
 
             {/* Notification Bell */}
             <NotificationBell
@@ -670,16 +685,6 @@ export default function App() {
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden lg:inline text-[11px]">Keluar</span>
             </button>
-
-            <button
-              onClick={handleResetDemoData}
-              className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-white/20"
-              title="Reset Demo Data"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-
-
           </div>
         </div>
       </header>
