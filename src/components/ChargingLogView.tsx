@@ -178,7 +178,6 @@ export const ChargingLogView: React.FC<ChargingLogViewProps> = ({
                   type="date"
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}
-                  onClick={e => e.currentTarget.showPicker?.()}
                   title="Pilih tanggal mulai"
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono text-xs cursor-pointer"
                 />
@@ -189,7 +188,6 @@ export const ChargingLogView: React.FC<ChargingLogViewProps> = ({
                   type="date"
                   value={endDate}
                   onChange={e => setEndDate(e.target.value)}
-                  onClick={e => e.currentTarget.showPicker?.()}
                   title="Pilih tanggal akhir (opsional untuk rentang)"
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono text-xs cursor-pointer"
                 />

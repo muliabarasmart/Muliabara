@@ -250,7 +250,6 @@ export const P2HLogView: React.FC<P2HLogViewProps> = ({
               type="date"
               value={startDate}
               onChange={e => setStartDate(e.target.value)}
-              onClick={e => e.currentTarget.showPicker?.()}
               title="Dari Tanggal"
               className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono text-xs cursor-pointer"
             />
@@ -259,7 +258,6 @@ export const P2HLogView: React.FC<P2HLogViewProps> = ({
               type="date"
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
-              onClick={e => e.currentTarget.showPicker?.()}
               title="Sampai Tanggal"
               className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono text-xs cursor-pointer"
             />
