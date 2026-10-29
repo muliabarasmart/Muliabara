@@ -221,7 +221,20 @@ export default function App() {
       if (payload.settings && typeof payload.settings === 'object' && payload.settings.primaryColor) setSettings(payload.settings);
     });
 
-    // 2. Subscribe to sync connection status
+    // 2. Subscribe to Firebase Firestore updates
+    const unsubscribeFirebase = realtimeSync.subscribeToFirebase((payload) => {
+        // Same logic as standard sync
+        if (Array.isArray(payload.records) && payload.records.length > 0) setP2hRecords(payload.records);
+        if (Array.isArray(payload.vehicles) && payload.vehicles.length > 0) setVehicles(payload.vehicles);
+        if (Array.isArray(payload.notifications)) setNotifications(payload.notifications);
+        if (Array.isArray(payload.users) && payload.users.length > 0) {
+            const validUsers = payload.users.filter((u): u is UserProfile => Boolean(u && typeof u === 'object' && u.id));
+            if (validUsers.length > 0) setAllUsers(validUsers);
+        }
+        if (payload.settings && typeof payload.settings === 'object' && payload.settings.primaryColor) setSettings(payload.settings);
+    });
+
+    // 3. Subscribe to sync connection status
     const unsubscribeStatus = realtimeSync.subscribeStatus((status, time) => {
       setSyncStatus(status);
       if (time) setLastSyncTime(time);
@@ -229,6 +242,7 @@ export default function App() {
 
     return () => {
       unsubscribeData();
+      unsubscribeFirebase();
       unsubscribeStatus();
     };
   }, []);
@@ -359,11 +373,13 @@ export default function App() {
     });
 
     // Realtime sync across devices immediately after transaction
-    realtimeSync.pushUpdate({
+    const payload = {
       records: updatedRecords.length ? updatedRecords : [savedForm, ...p2hRecords],
       vehicles: updatedVehicles.length ? updatedVehicles : vehicles,
       notifications: [newNotif, ...notifications]
-    });
+    };
+    realtimeSync.pushUpdate(payload);
+    realtimeSync.syncToFirebase(payload);
 
     setEditingForm(null);
     setActiveNav('log');
@@ -426,10 +442,12 @@ export default function App() {
       return updatedNotifications;
     });
 
-    realtimeSync.pushUpdate({
+    const payload = {
       records: updatedRecords,
       notifications: updatedNotifications
-    });
+    };
+    realtimeSync.pushUpdate(payload);
+    realtimeSync.syncToFirebase(payload);
 
     playSuccessChime();
   };
@@ -450,23 +468,21 @@ export default function App() {
       return updatedNotifs;
     });
 
-    realtimeSync.pushUpdate({
+    const payload = {
       records: updatedRecords,
       notifications: updatedNotifs
-    });
+    };
+    realtimeSync.pushUpdate(payload);
+    realtimeSync.syncToFirebase(payload);
 
     playTriggerSound();
   };
 
   // Handler: Add New Vehicle
   const handleAddVehicle = (newVeh: VehicleUnit) => {
-    let updated: VehicleUnit[] = [];
-    setVehicles(prev => {
-      updated = [...prev, newVeh];
-      localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(updated));
-      return updated;
-    });
-    realtimeSync.pushUpdate({ vehicles: updated });
+    const payload = { vehicles: updated };
+    realtimeSync.pushUpdate(payload);
+    realtimeSync.syncToFirebase(payload);
     playTriggerSound();
   };
 
@@ -477,7 +493,9 @@ export default function App() {
       localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(updated));
       return updated;
     });
-    realtimeSync.pushUpdate({ vehicles: updated });
+    const payload = { vehicles: updated };
+    realtimeSync.pushUpdate(payload);
+    realtimeSync.syncToFirebase(payload);
   };
 
   const handleDeleteVehicle = (unitId: string) => {
@@ -487,7 +505,9 @@ export default function App() {
       localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(updated));
       return updated;
     });
-    realtimeSync.pushUpdate({ vehicles: updated });
+    const payload = { vehicles: updated };
+    realtimeSync.pushUpdate(payload);
+    realtimeSync.syncToFirebase(payload);
   };
 
   // Handlers for User Management
@@ -495,7 +515,9 @@ export default function App() {
     const updated = [newUser, ...allUsers];
     setAllUsers(updated);
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updated));
-    realtimeSync.pushUpdate({ users: updated });
+    const payload = { users: updated };
+    realtimeSync.pushUpdate(payload);
+    realtimeSync.syncToFirebase(payload);
     playTriggerSound();
   };
 
@@ -508,7 +530,9 @@ export default function App() {
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedUser));
       localStorage.setItem(STORAGE_KEYS.ACTIVE_USER_ID, updatedUser.id);
     }
-    realtimeSync.pushUpdate({ users: updated });
+    const payload = { users: updated };
+    realtimeSync.pushUpdate(payload);
+    realtimeSync.syncToFirebase(payload);
     playTriggerSound();
   };
 
@@ -516,7 +540,9 @@ export default function App() {
     const updated = allUsers.filter(u => u.id !== userId);
     setAllUsers(updated);
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updated));
-    realtimeSync.pushUpdate({ users: updated });
+    const payload = { users: updated };
+    realtimeSync.pushUpdate(payload);
+    realtimeSync.syncToFirebase(payload);
     playTriggerSound();
   };
 
@@ -530,7 +556,9 @@ export default function App() {
 
   const handleUpdateSettings = (newSettings: AppSettings) => {
     setSettings(newSettings);
-    realtimeSync.pushUpdate({ settings: newSettings });
+    const payload = { settings: newSettings };
+    realtimeSync.pushUpdate(payload);
+    realtimeSync.syncToFirebase(payload);
   };
 
   // Reset Demo Data / Clear All Data

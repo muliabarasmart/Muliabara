@@ -1,5 +1,7 @@
 // Realtime Cloud Synchronization Engine for Netlify <-> Google AI Studio <-> Mobile <-> PC
 // Uses Global Cloud Pub/Sub SSE relay + Cloud Polling + BroadcastChannel + Local Server + LocalStorage
+import { db } from './firebase';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 export interface SyncPayload {
   action?: 'sync_full' | 'upsert_record' | 'delete_record' | 'update_vehicles' | 'update_users' | 'update_notifications' | 'update_settings';
@@ -18,7 +20,6 @@ export interface SyncPayload {
 type SyncCallback = (payload: SyncPayload) => void;
 type StatusCallback = (status: 'connected' | 'syncing' | 'offline', lastSyncTime?: string) => void;
 
-// Global Cloud Pub/Sub SSE Relay Channel (Open CORS, zero-latency, works across Netlify & AI Studio)
 const GLOBAL_CLOUD_TOPIC = 'https://ntfy.sh/muliabara_jac_t9_ev_fleet_sync_2026';
 
 class RealtimeSyncManager {
@@ -39,7 +40,6 @@ class RealtimeSyncManager {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      // 1. Setup multi-tab BroadcastChannel on same device
       try {
         this.broadcastChannel = new BroadcastChannel('jac_t9_ev_sync');
         this.broadcastChannel.onmessage = (event) => {
@@ -48,21 +48,14 @@ class RealtimeSyncManager {
           }
         };
       } catch {
-        // BroadcastChannel fallback
       }
 
-      // 2. Connect Global Cloud SSE Stream (Works on Netlify, Mobile, PC, AI Studio)
       this.connectCloudSSE();
-
-      // 3. Start Cloud Polling heartbeat (every 4 seconds) to ensure 100% data sync
       this.startCloudPolling();
-
-      // 4. Initial pull from cloud
       this.fetchLatestCloudState();
     }
   }
 
-  // Connect to persistent Global SSE stream
   private connectCloudSSE() {
     if (typeof window === 'undefined') return;
 
@@ -73,7 +66,6 @@ class RealtimeSyncManager {
 
       this.updateStatus('syncing');
 
-      // Native SSE connection to global cloud relay
       const sseUrl = `${GLOBAL_CLOUD_TOPIC}/sse`;
       this.eventSource = new EventSource(sseUrl);
 
@@ -110,7 +102,6 @@ class RealtimeSyncManager {
             this.handleIncomingPayload(innerData);
           }
         } catch {
-          // ignore keepalive comments
         }
       };
 
@@ -127,7 +118,6 @@ class RealtimeSyncManager {
     }
   }
 
-  // Fetch the latest published cloud state on startup / poll
   public async fetchLatestCloudState() {
     try {
       this.updateStatus('syncing');
@@ -139,7 +129,6 @@ class RealtimeSyncManager {
         const text = await res.text();
         const lines = text.trim().split('\n').filter(Boolean);
         
-        // Find latest sync message
         for (let i = lines.length - 1; i >= 0; i--) {
           try {
             const row = JSON.parse(lines[i]);
@@ -165,17 +154,14 @@ class RealtimeSyncManager {
               }
             }
           } catch {
-            // continue searching backwards
           }
         }
         this.updateStatus('connected');
       }
     } catch {
-      // offline / quiet
     }
   }
 
-  // Periodic polling heartbeat
   private startCloudPolling() {
     if (this.pollInterval) clearInterval(this.pollInterval);
     this.pollInterval = setInterval(() => {
@@ -183,7 +169,6 @@ class RealtimeSyncManager {
     }, 4500);
   }
 
-  // Process incoming sync message from another device (Mobile, Netlify, PC)
   private handleIncomingPayload(payload: SyncPayload) {
     if (!payload) return;
     if (payload.originId === this.clientId) return;
@@ -223,7 +208,6 @@ class RealtimeSyncManager {
       try {
         cb(status, this.lastSyncTime);
       } catch {
-        // ignore
       }
     });
   }
@@ -238,7 +222,6 @@ class RealtimeSyncManager {
     });
   }
 
-  // Push updates to cloud relay so ALL devices (Mobile, Netlify, PC, AI Studio) update in real-time
   public async pushUpdate(payload: SyncPayload) {
     const version = Date.now();
     this.lastKnownVersion = version;
@@ -252,14 +235,11 @@ class RealtimeSyncManager {
       timestamp: new Date().toISOString()
     };
 
-    // 1. Broadcast locally to all browser tabs
     try {
       this.broadcastChannel?.postMessage({ state: enriched });
     } catch {
-      // ignore
     }
 
-    // 2. Publish to Global Cloud Relay (accessible by Netlify, Mobile, PC, AI Studio)
     if (!this.isPublishing) {
       this.isPublishing = true;
       this.updateStatus('syncing');
@@ -281,7 +261,6 @@ class RealtimeSyncManager {
       }
     }
 
-    // 3. If running inside AI Studio local dev server, also notify server.ts
     try {
       if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname.includes('run.app'))) {
         fetch('/api/sync', {
@@ -291,11 +270,33 @@ class RealtimeSyncManager {
         }).catch(() => {});
       }
     } catch {
-      // ignore
     }
   }
 
-  // Force trigger full synchronization now
+  public async syncToFirebase(payload: SyncPayload) {
+    try {
+      const docRef = doc(db, 'sync', 'latest');
+      await setDoc(docRef, {
+        ...payload,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (err) {
+      console.error('Firebase sync error:', err);
+    }
+  }
+
+  public subscribeToFirebase(callback: SyncCallback) {
+    const docRef = doc(db, 'sync', 'latest');
+    return onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as SyncPayload;
+        if (data.originId !== this.clientId) {
+          this.handleIncomingPayload(data);
+        }
+      }
+    });
+  }
+
   public async forceSyncNow(currentState?: SyncPayload) {
     this.updateStatus('syncing');
     if (currentState) {
