@@ -29,6 +29,7 @@ interface SettingsViewProps {
   settings: AppSettings;
   currentUser?: UserProfile;
   onUpdateSettings: (newSettings: AppSettings) => void;
+  onClearData: () => void;
 }
 
 // 12 Industrial EV Theme Colors (Requirement 8)
@@ -73,7 +74,8 @@ export const SOUND_PRESETS = [
 export const SettingsView: React.FC<SettingsViewProps> = ({
   settings,
   currentUser,
-  onUpdateSettings
+  onUpdateSettings,
+  onClearData
 }) => {
   const isAdmin = !currentUser || currentUser.role === 'admin' || currentUser.role === 'Master Admin';
 
@@ -611,7 +613,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Submit & Save Bar */}
-        <div className="flex items-center justify-end gap-3 pt-3">
+        <div className="flex items-center justify-between gap-3 pt-6 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={onClearData}
+            className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md transition-all cursor-pointer"
+          >
+            <ShieldAlert className="w-4 h-4" />
+            Hapus Semua Data
+          </button>
+
           <button
             type="submit"
             className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl shadow-md transition-all cursor-pointer active:scale-[0.99]"

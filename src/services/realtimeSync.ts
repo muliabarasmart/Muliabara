@@ -82,26 +82,34 @@ class RealtimeSyncManager {
         this.updateStatus('connected');
       };
 
-      this.eventSource.onmessage = (e) => {
+      this.eventSource.onmessage = async (e) => {
         try {
           const parsed = JSON.parse(e.data);
-          if (parsed && parsed.message) {
-            let innerData: SyncPayload;
+          let innerData: SyncPayload | null = null;
+
+          if (parsed?.attachment?.url) {
+            try {
+              const res = await fetch(parsed.attachment.url);
+              innerData = await res.json();
+            } catch (err) {
+              console.warn('Failed to fetch SSE attachment:', err);
+            }
+          } else if (parsed && parsed.message) {
             if (typeof parsed.message === 'string') {
               try {
                 innerData = JSON.parse(parsed.message);
               } catch {
-                innerData = { action: 'sync_full' };
+                innerData = null;
               }
             } else {
               innerData = parsed.message;
             }
-
-            if (innerData && innerData.originId !== this.clientId) {
-              this.handleIncomingPayload(innerData);
-            }
           }
-        } catch (err) {
+
+          if (innerData && innerData.originId !== this.clientId) {
+            this.handleIncomingPayload(innerData);
+          }
+        } catch {
           // ignore keepalive comments
         }
       };
@@ -135,16 +143,25 @@ class RealtimeSyncManager {
         for (let i = lines.length - 1; i >= 0; i--) {
           try {
             const row = JSON.parse(lines[i]);
-            if (row && row.message) {
-              const payload: SyncPayload = typeof row.message === 'string' 
+            let payload: SyncPayload | null = null;
+
+            if (row.attachment?.url) {
+              try {
+                const attRes = await fetch(row.attachment.url);
+                payload = await attRes.json();
+              } catch {
+                payload = null;
+              }
+            } else if (row.message) {
+              payload = typeof row.message === 'string' 
                 ? JSON.parse(row.message) 
                 : row.message;
+            }
 
-              if (payload && payload.version && payload.version > this.lastKnownVersion) {
-                if (payload.originId !== this.clientId) {
-                  this.handleIncomingPayload(payload);
-                  break;
-                }
+            if (payload && payload.version && payload.version > this.lastKnownVersion) {
+              if (payload.originId !== this.clientId) {
+                this.handleIncomingPayload(payload);
+                break;
               }
             }
           } catch {
@@ -153,7 +170,7 @@ class RealtimeSyncManager {
         }
         this.updateStatus('connected');
       }
-    } catch (err) {
+    } catch {
       // offline / quiet
     }
   }

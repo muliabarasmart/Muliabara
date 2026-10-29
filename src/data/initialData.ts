@@ -496,6 +496,290 @@ export const INITIAL_P2H_RECORDS: P2HFormRecord[] = [
       signatureUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M10,40 Q50,70 110,20 T170,40" fill="none" stroke="%230284c7" stroke-width="3"/></svg>',
       submittedAt: '2026-10-01 07:05 WITA'
     }
+  },
+  {
+    id: 'p2h-2026-005',
+    docNumber: 'F-QHSE-OPS-MOB-09',
+    createdAt: '2026-10-26T07:10:00.000Z',
+    updatedAt: '2026-10-26T07:35:00.000Z',
+    operatorName: 'Ir. Bambang Wijaya',
+    operatorNik: 'MNG-001',
+    date: '2026-10-26',
+    shift: 'Shift 1 (Siang)',
+    workLocation: 'Pit Central Hauling Route',
+    jobSite: 'Sun Mining Project Kutai',
+    equipmentType: 'Light Vehicle (EV)',
+    unitModel: 'JAC T9 EV 4x4',
+    unitNumber: 'LV-EV-01',
+    skoExpiryDate: '2026-12-15',
+    startKm: 12480,
+    endKm: 12610,
+    startSoc: 96,
+    endSoc: 60,
+    batteryCapacityKwh: 88.02,
+    totalKm: 130,
+    batteryUsedPercent: 36,
+    energyConsumedKwh: 31.68,
+    consumptionRateKwhPerKm: 0.244,
+    costSavingsIdr: 184500,
+    co2ReductionKg: 30.2,
+    charging: {
+      percentCharged: 66,
+      energyAddedKwh: 58.0,
+      estimatedRangeKm: 215,
+      chargingLocation: 'SPKLU Pit Utara Station 01'
+    },
+    driverCondition: {
+      idCardExpiry: '2028-04-12',
+      simperExpiry: '2027-11-20',
+      items: { drv_1: 'ya', drv_2: 'ya', drv_3a: 'ya', drv_3b: 'ya', drv_3c: 'ya', drv_3d: 'ya', drv_4: 'ya', drv_5: 'ya' },
+      notes: {}
+    },
+    inspections: {
+      crit_1: { status: 'normal' }, crit_2: { status: 'normal' }, crit_3: { status: 'normal' },
+      crit_4: { status: 'normal' }, crit_5: { status: 'normal' }, crit_6: { status: 'normal' },
+      crit_7: { status: 'normal' }, crit_8: { status: 'normal' }, crit_9: { status: 'normal' },
+      crit_10: { status: 'normal' }, crit_11: { status: 'normal' }, crit_12: { status: 'normal' },
+      crit_13_1: { status: 'normal' }, crit_13_2: { status: 'normal' }, crit_13_3: { status: 'normal' },
+      crit_14: { status: 'normal' }, crit_15: { status: 'normal' }, crit_16: { status: 'normal' },
+      crit_17: { status: 'normal' }, crit_18: { status: 'normal' }, crit_19: { status: 'normal' },
+      crit_20: { status: 'normal' }, crit_21_1: { status: 'normal' }, crit_21_2: { status: 'normal' },
+      crit_21_3: { status: 'normal' }, crit_22: { status: 'normal' }, crit_23: { status: 'normal' },
+      non_1: { status: 'normal' }, non_2: { status: 'normal' }, non_3: { status: 'normal' }, non_4: { status: 'normal' }
+    },
+    overallStatus: 'approved',
+    hasAbnormalCritical: false,
+    hasAbnormalNonCritical: false,
+    mechanicRecommendation: {
+      status: 'continue_operation',
+      reason: 'Sistem High Voltage dan pendingin baterai bekerja optimal.',
+      mechanicName: 'Hendra Gunawan',
+      mechanicNik: 'MEK-4109'
+    },
+    foremanApproval: {
+      status: 'approved',
+      notes: 'P2H disetujui untuk operasional pengawasan tambang.',
+      foremanName: 'Suryadi Pratama',
+      foremanNik: 'FRM-2045'
+    },
+    operatorSignature: {
+      agreed: true,
+      signatureUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M10,50 Q40,10 80,40 T150,30 T190,60" fill="none" stroke="%230284c7" stroke-width="3"/></svg>',
+      submittedAt: '2026-10-26 07:15 WITA'
+    }
+  },
+  {
+    id: 'p2h-2026-006',
+    docNumber: 'F-QHSE-OPS-MOB-09',
+    createdAt: '2026-10-27T06:45:00.000Z',
+    updatedAt: '2026-10-27T07:15:00.000Z',
+    operatorName: 'Ahmad Fauzi',
+    operatorNik: 'OP-6190',
+    date: '2026-10-27',
+    shift: 'Shift 1 (Siang)',
+    workLocation: 'Main Hauling Road KM 10',
+    jobSite: 'Sun Mining Project Kutai',
+    equipmentType: 'Light Vehicle (EV)',
+    unitModel: 'JAC T9 EV 4x4',
+    unitNumber: 'LV-EV-02',
+    skoExpiryDate: '2027-02-28',
+    startKm: 5120,
+    endKm: 5235,
+    startSoc: 98,
+    endSoc: 68,
+    batteryCapacityKwh: 88.02,
+    totalKm: 115,
+    batteryUsedPercent: 30,
+    energyConsumedKwh: 26.4,
+    consumptionRateKwhPerKm: 0.229,
+    costSavingsIdr: 161000,
+    co2ReductionKg: 25.1,
+    charging: {
+      percentCharged: 70,
+      energyAddedKwh: 61.6,
+      estimatedRangeKm: 230,
+      chargingLocation: 'SPKLU Central Workshop'
+    },
+    driverCondition: {
+      idCardExpiry: '2028-01-10',
+      simperExpiry: '2027-09-15',
+      items: { drv_1: 'ya', drv_2: 'ya', drv_3a: 'ya', drv_3b: 'ya', drv_3c: 'ya', drv_3d: 'ya', drv_4: 'ya', drv_5: 'ya' },
+      notes: {}
+    },
+    inspections: {
+      crit_1: { status: 'normal' }, crit_2: { status: 'normal' }, crit_3: { status: 'normal' },
+      crit_4: { status: 'normal' }, crit_5: { status: 'normal' }, crit_6: { status: 'normal' },
+      crit_7: { status: 'normal' }, crit_8: { status: 'normal' }, crit_9: { status: 'normal' },
+      crit_10: { status: 'normal' }, crit_11: { status: 'normal' }, crit_12: { status: 'normal' },
+      crit_13_1: { status: 'normal' }, crit_13_2: { status: 'normal' }, crit_13_3: { status: 'normal' },
+      crit_14: { status: 'normal' }, crit_15: { status: 'normal' }, crit_16: { status: 'normal' },
+      crit_17: { status: 'normal' }, crit_18: { status: 'normal' }, crit_19: { status: 'normal' },
+      crit_20: { status: 'normal' }, crit_21_1: { status: 'normal' }, crit_21_2: { status: 'normal' },
+      crit_21_3: { status: 'normal' }, crit_22: { status: 'normal' }, crit_23: { status: 'normal' },
+      non_1: { status: 'normal' }, non_2: { status: 'normal' }, non_3: { status: 'normal' }, non_4: { status: 'normal' }
+    },
+    overallStatus: 'approved',
+    hasAbnormalCritical: false,
+    hasAbnormalNonCritical: false,
+    mechanicRecommendation: {
+      status: 'continue_operation',
+      reason: 'Wiper baru terpasang sempurna, siap operasi pit.',
+      mechanicName: 'Hendra Gunawan',
+      mechanicNik: 'MEK-4109'
+    },
+    foremanApproval: {
+      status: 'approved',
+      notes: 'Disetujui beroperasi.',
+      foremanName: 'Suryadi Pratama',
+      foremanNik: 'FRM-2045'
+    },
+    operatorSignature: {
+      agreed: true,
+      signatureUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M25,50 Q60,30 90,60 T145,20 T180,45" fill="none" stroke="%230284c7" stroke-width="3"/></svg>',
+      submittedAt: '2026-10-27 06:50 WITA'
+    }
+  },
+  {
+    id: 'p2h-2026-007',
+    docNumber: 'F-QHSE-OPS-MOB-09',
+    createdAt: '2026-10-28T06:30:00.000Z',
+    updatedAt: '2026-10-28T07:05:00.000Z',
+    operatorName: 'Ir. Bambang Wijaya',
+    operatorNik: 'MNG-001',
+    date: '2026-10-28',
+    shift: 'Shift 1 (Siang)',
+    workLocation: 'Pit Barat & Hauling Road KM 18',
+    jobSite: 'Sun Mining Project Kutai',
+    equipmentType: 'Light Vehicle (EV)',
+    unitModel: 'JAC T9 EV 4x4',
+    unitNumber: 'LV-EV-03',
+    skoExpiryDate: '2026-11-20',
+    startKm: 26800,
+    endKm: 26945,
+    startSoc: 95,
+    endSoc: 55,
+    batteryCapacityKwh: 88.02,
+    totalKm: 145,
+    batteryUsedPercent: 40,
+    energyConsumedKwh: 35.2,
+    consumptionRateKwhPerKm: 0.242,
+    costSavingsIdr: 205000,
+    co2ReductionKg: 33.4,
+    charging: {
+      percentCharged: 62,
+      energyAddedKwh: 54.5,
+      estimatedRangeKm: 205,
+      chargingLocation: 'SPKLU Hauling Sector B'
+    },
+    driverCondition: {
+      idCardExpiry: '2027-11-30',
+      simperExpiry: '2027-04-18',
+      items: { drv_1: 'ya', drv_2: 'ya', drv_3a: 'ya', drv_3b: 'ya', drv_3c: 'ya', drv_3d: 'ya', drv_4: 'ya', drv_5: 'ya' },
+      notes: {}
+    },
+    inspections: {
+      crit_1: { status: 'normal' }, crit_2: { status: 'normal' }, crit_3: { status: 'normal' },
+      crit_4: { status: 'normal' }, crit_5: { status: 'normal' }, crit_6: { status: 'normal' },
+      crit_7: { status: 'normal' }, crit_8: { status: 'normal' }, crit_9: { status: 'normal' },
+      crit_10: { status: 'normal' }, crit_11: { status: 'normal' }, crit_12: { status: 'normal' },
+      crit_13_1: { status: 'normal' }, crit_13_2: { status: 'normal' }, crit_13_3: { status: 'normal' },
+      crit_14: { status: 'normal' }, crit_15: { status: 'normal' }, crit_16: { status: 'normal' },
+      crit_17: { status: 'normal' }, crit_18: { status: 'normal' }, crit_19: { status: 'normal' },
+      crit_20: { status: 'normal' }, crit_21_1: { status: 'normal' }, crit_21_2: { status: 'normal' },
+      crit_21_3: { status: 'normal' }, crit_22: { status: 'normal' }, crit_23: { status: 'normal' },
+      non_1: { status: 'normal' }, non_2: { status: 'normal' }, non_3: { status: 'normal' }, non_4: { status: 'normal' }
+    },
+    overallStatus: 'approved',
+    hasAbnormalCritical: false,
+    hasAbnormalNonCritical: false,
+    mechanicRecommendation: {
+      status: 'continue_operation',
+      reason: 'Suhu baterai CATL stabil di 29 derajat celcius.',
+      mechanicName: 'Hendra Gunawan',
+      mechanicNik: 'MEK-4109'
+    },
+    foremanApproval: {
+      status: 'approved',
+      notes: 'Disetujui beroperasi.',
+      foremanName: 'Suryadi Pratama',
+      foremanNik: 'FRM-2045'
+    },
+    operatorSignature: {
+      agreed: true,
+      signatureUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M10,40 Q50,70 110,20 T170,40" fill="none" stroke="%230284c7" stroke-width="3"/></svg>',
+      submittedAt: '2026-10-28 06:35 WITA'
+    }
+  },
+  {
+    id: 'p2h-2026-008',
+    docNumber: 'F-QHSE-OPS-MOB-09',
+    createdAt: '2026-10-28T07:20:00.000Z',
+    updatedAt: '2026-10-28T07:45:00.000Z',
+    operatorName: 'Dedi Kurniawan',
+    operatorNik: 'OP-4491',
+    date: '2026-10-28',
+    shift: 'Shift 1 (Siang)',
+    workLocation: 'Port Terminal Jetty 2 & Stockpile',
+    jobSite: 'Sun Mining Project Kutai',
+    equipmentType: 'Light Vehicle (EV)',
+    unitModel: 'JAC T9 EV 4x4',
+    unitNumber: 'LV-EV-04',
+    skoExpiryDate: '2027-01-10',
+    startKm: 8950,
+    endKm: 9075,
+    startSoc: 96,
+    endSoc: 64,
+    batteryCapacityKwh: 88.02,
+    totalKm: 125,
+    batteryUsedPercent: 32,
+    energyConsumedKwh: 28.16,
+    consumptionRateKwhPerKm: 0.225,
+    costSavingsIdr: 172000,
+    co2ReductionKg: 26.8,
+    charging: {
+      percentCharged: 80,
+      energyAddedKwh: 70.4,
+      estimatedRangeKm: 260,
+      chargingLocation: 'SPKLU Port Jetty Fast Charger'
+    },
+    driverCondition: {
+      idCardExpiry: '2027-10-15',
+      simperExpiry: '2027-08-20',
+      items: { drv_1: 'ya', drv_2: 'ya', drv_3a: 'ya', drv_3b: 'ya', drv_3c: 'ya', drv_3d: 'ya', drv_4: 'ya', drv_5: 'ya' },
+      notes: {}
+    },
+    inspections: {
+      crit_1: { status: 'normal' }, crit_2: { status: 'normal' }, crit_3: { status: 'normal' },
+      crit_4: { status: 'normal' }, crit_5: { status: 'normal' }, crit_6: { status: 'normal' },
+      crit_7: { status: 'normal' }, crit_8: { status: 'normal' }, crit_9: { status: 'normal' },
+      crit_10: { status: 'normal' }, crit_11: { status: 'normal' }, crit_12: { status: 'normal' },
+      crit_13_1: { status: 'normal' }, crit_13_2: { status: 'normal' }, crit_13_3: { status: 'normal' },
+      crit_14: { status: 'normal' }, crit_15: { status: 'normal' }, crit_16: { status: 'normal' },
+      crit_17: { status: 'normal' }, crit_18: { status: 'normal' }, crit_19: { status: 'normal' },
+      crit_20: { status: 'normal' }, crit_21_1: { status: 'normal' }, crit_21_2: { status: 'normal' },
+      crit_21_3: { status: 'normal' }, crit_22: { status: 'normal' }, crit_23: { status: 'normal' },
+      non_1: { status: 'normal' }, non_2: { status: 'normal' }, non_3: { status: 'normal' }, non_4: { status: 'normal' }
+    },
+    overallStatus: 'approved',
+    hasAbnormalCritical: false,
+    hasAbnormalNonCritical: false,
+    mechanicRecommendation: {
+      status: 'continue_operation',
+      reason: 'Semua sistem keselamatan dan penggerak 4x4 beroperasi prima.',
+      mechanicName: 'Hendra Gunawan',
+      mechanicNik: 'MEK-4109'
+    },
+    foremanApproval: {
+      status: 'approved',
+      notes: 'Disetujui beroperasi.',
+      foremanName: 'Suryadi Pratama',
+      foremanNik: 'FRM-2045'
+    },
+    operatorSignature: {
+      agreed: true,
+      signatureUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80"><path d="M10,40 Q50,70 110,20 T170,40" fill="none" stroke="%230284c7" stroke-width="3"/></svg>',
+      submittedAt: '2026-10-28 07:25 WITA'
+    }
   }
 ];
 

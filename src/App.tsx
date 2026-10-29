@@ -33,16 +33,14 @@ import {
   RotateCcw, 
   LogOut, 
   Shield, 
-  Wifi, 
-  CheckCircle2,
-  Zap,
-  BatteryCharging,
-  Cog,
-  BarChart3,
-  Menu,
-  X,
-  ChevronDown,
-  RefreshCw
+  Zap, 
+  BatteryCharging, 
+  Cog, 
+  BarChart3, 
+  Menu, 
+  X, 
+  ChevronDown, 
+  RefreshCw 
 } from 'lucide-react';
 import { playTriggerSound, playSuccessChime } from './utils/audio';
 
@@ -86,7 +84,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export default function App() {
-  // Login State - Default to FALSE so opening Netlify requires passing through LoginView
+  // Login State - Default to FALSE so opening requires passing through LoginView
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN);
@@ -99,27 +97,23 @@ export default function App() {
   // Vehicles State
   const [vehicles, setVehicles] = useState<VehicleUnit[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.VEHICLES);
-    return saved ? JSON.parse(saved) : INITIAL_VEHICLES;
+    return saved ? JSON.parse(saved) : [];
   });
 
   // P2H Records State
   const [p2hRecords, setP2hRecords] = useState<P2HFormRecord[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.RECORDS);
-      const parsed = saved ? JSON.parse(saved) : INITIAL_P2H_RECORDS;
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return Array.from(new Map(parsed.map(r => [r.id, r])).values());
-      }
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      // fallback
+      return [];
     }
-    return INITIAL_P2H_RECORDS;
   });
 
   // Maintenance Logs State
   const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.LOGS);
-    return saved ? JSON.parse(saved) : INITIAL_MAINTENANCE_LOGS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Fallback Admin Account
@@ -132,43 +126,26 @@ export default function App() {
       if (saved && saved !== 'undefined' && saved !== 'null') {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const validUsers = parsed
-            .filter((u): u is UserProfile => Boolean(u && typeof u === 'object' && u.id))
-            .map(u => ({
-              ...u,
-              role: u.role || 'operator',
-              username: u.username || (u.role === 'admin' ? 'admin' : u.nik ? String(u.nik).toLowerCase().replace(/[^a-z0-9]/g, '') : `user_${u.id}`)
-            }));
-          if (validUsers.length > 0) return validUsers;
+          return parsed.filter((u): u is UserProfile => Boolean(u && typeof u === 'object' && u.id));
         }
       }
     } catch {
       // fallback
     }
-    return INITIAL_ACCOUNTS;
+    return [DEFAULT_ADMIN_USER];
   });
 
-  // Current Logged In User State - strictly bound to ACTIVE_USER_ID & allUsers (Requirement 1)
+  // Current Logged In User State
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
     try {
       const activeId = localStorage.getItem(STORAGE_KEYS.ACTIVE_USER_ID);
-      if (activeId) {
-        const found = allUsers.find(u => u.id === activeId);
-        if (found) return found;
-      }
       const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
       if (saved && saved !== 'undefined' && saved !== 'null') {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object' && parsed.id) {
-          const matchInAll = allUsers.find(u => u.id === parsed.id);
-          if (matchInAll) return matchInAll;
-          return {
-            ...DEFAULT_ADMIN_USER,
-            ...parsed,
-            role: parsed.role || 'admin',
-            username: parsed.username || (parsed.role === 'admin' ? 'admin' : parsed.nik ? String(parsed.nik).toLowerCase().replace(/[^a-z0-9]/g, '') : 'admin')
-          };
-        }
+        return JSON.parse(saved);
+      }
+      if (activeId) {
+        const found = INITIAL_ACCOUNTS.find(u => u.id === activeId);
+        if (found) return found;
       }
     } catch {
       // fallback
@@ -185,11 +162,21 @@ export default function App() {
   // Notifications State
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [activeNav, setActiveNav] = useState<'dashboard' | 'p2h' | 'log' | 'charging_log' | 'units' | 'account' | 'settings'>('dashboard');
-  const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const NAV_LABELS: Record<string, string> = {
+    dashboard: 'Dashboard Telemetri EV',
+    p2h: 'Formulir P2H Baru',
+    log: 'Log & Arsip P2H',
+    charging_log: 'Log EV Charging SPKLU',
+    units: 'Daftar Unit Fleet EV',
+    account: 'Profil & Hak Akses Akun',
+    settings: 'Pengaturan Sistem'
+  };
 
   // Editing state for P2H form
   const [editingForm, setEditingForm] = useState<P2HFormRecord | null>(null);
@@ -208,7 +195,7 @@ export default function App() {
     }
   }, [currentUser, DEFAULT_ADMIN_USER]);
 
-  // REQUIREMENT 8: If non-admin is on settings, redirect to 'p2h'
+  // If non-admin is on settings, redirect to 'p2h'
   useEffect(() => {
     if (!isAdmin && activeNav === 'settings') {
       setActiveNav('p2h');
@@ -281,16 +268,33 @@ export default function App() {
 
   // Apply custom theme font to root body
   useEffect(() => {
-    document.body.style.fontFamily = `'${settings.fontFamily}', system-ui, sans-serif`;
+    if (settings.fontFamily) {
+      document.body.style.fontFamily = `'${settings.fontFamily}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+    }
   }, [settings.fontFamily]);
 
+  // Force trigger sync
+  const handleForceSync = async () => {
+    setIsManualSyncing(true);
+    await realtimeSync.forceSyncNow({
+      records: p2hRecords,
+      vehicles: vehicles,
+      users: allUsers,
+      notifications: notifications,
+      settings: settings
+    });
+    setTimeout(() => {
+      setIsManualSyncing(false);
+    }, 800);
+  };
+
   // Handler: Login Success
-  const handleLoginSuccess = (user?: UserProfile) => {
+  const handleLoginSuccess = (user: UserProfile) => {
     const safeUser = (user && user.id && user.role) ? user : DEFAULT_ADMIN_USER;
-    localStorage.setItem(STORAGE_KEYS.ACTIVE_USER_ID, safeUser.id);
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(safeUser));
-    localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, 'true');
     setCurrentUser(safeUser);
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(safeUser));
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_USER_ID, safeUser.id);
+    localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, 'true');
     setIsLoggedIn(true);
     playTriggerSound();
   };
@@ -302,31 +306,32 @@ export default function App() {
     playTriggerSound();
   };
 
-  // Handler: Save P2H Form & Trigger Approval Notification (Requirements 1, 3, 6)
+  // Handler: Save or Update P2H Form
   const handleSaveP2H = (savedForm: P2HFormRecord) => {
     let updatedRecords: P2HFormRecord[] = [];
     setP2hRecords(prev => {
-      const filtered = prev.filter(r => r.id !== savedForm.id);
-      updatedRecords = [savedForm, ...filtered];
-      return Array.from(new Map(updatedRecords.map(r => [r.id, r])).values());
+      const exists = prev.some(r => r.id === savedForm.id);
+      if (exists) {
+        updatedRecords = prev.map(r => (r.id === savedForm.id ? savedForm : r));
+      } else {
+        updatedRecords = [savedForm, ...prev];
+      }
+      localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(updatedRecords));
+      return updatedRecords;
     });
 
-    // Update vehicle unit telemetry
     let updatedVehicles: VehicleUnit[] = [];
     setVehicles(prevVehicles => {
       updatedVehicles = prevVehicles.map(veh => {
         if (veh.unitNumber === savedForm.unitNumber) {
-          const newCumulativeKwh = veh.cumulativeKwh + savedForm.energyConsumedKwh;
-          let newStatus = veh.status;
-          if (newCumulativeKwh >= veh.nextServiceKwh) {
-            newStatus = 'maintenance_due';
-          }
           return {
             ...veh,
             currentOdoKm: savedForm.endKm,
             currentSoc: savedForm.endSoc,
-            cumulativeKwh: Number(newCumulativeKwh.toFixed(1)),
-            status: newStatus
+            cumulativeKwh: (veh.cumulativeKwh || 0) + (savedForm.energyConsumedKwh || 0),
+            assignedDriver: savedForm.operatorName,
+            location: savedForm.workLocation,
+            status: savedForm.overallStatus === 'approved' ? 'operating' : veh.status
           };
         }
         return veh;
@@ -334,7 +339,6 @@ export default function App() {
       return updatedVehicles;
     });
 
-    // Requirement 3: Saat Driver simpan & ajukan, munculkan pemberitahuan meminta persetujuan Approve ke Lonceng
     const newNotif: NotificationItem = {
       id: `notif_${Date.now()}`,
       title: `🔔 Permintaan Approval P2H (${savedForm.unitNumber})`,
@@ -354,7 +358,7 @@ export default function App() {
       return updatedNotifications;
     });
 
-    // REQUIREMENT 6: Realtime sync across devices immediately after transaction
+    // Realtime sync across devices immediately after transaction
     realtimeSync.pushUpdate({
       records: updatedRecords.length ? updatedRecords : [savedForm, ...p2hRecords],
       vehicles: updatedVehicles.length ? updatedVehicles : vehicles,
@@ -365,7 +369,7 @@ export default function App() {
     setActiveNav('log');
   };
 
-  // Handler: Quick Approve from Notification Bell (Requirement 3: strictly Admin only & attaches Foreman signature)
+  // Handler: Quick Approve from Notification Bell
   const handleQuickApproveFromBell = (formId: string, notifId?: string) => {
     if (activeUser.role !== 'admin' && activeUser.role !== 'Master Admin') {
       alert('Akses Ditolak: Hanya Akun Admin yang memiliki hak otorisasi untuk menyetujui (Approve) P2H.');
@@ -402,8 +406,6 @@ export default function App() {
     let singleApproved = false;
     setNotifications(prev => {
       updatedNotifications = prev.map(n => {
-        // If notifId is specified, match strictly that notification ID
-        // If not, only match the single first pending notification for this form so other rows remain untouched
         const isTarget = notifId 
           ? n.id === notifId 
           : (!singleApproved && n.formId === formId && n.type === 'p2h_submitted');
@@ -424,7 +426,6 @@ export default function App() {
       return updatedNotifications;
     });
 
-    // Broadcast approval realtime to Phone and other devices
     realtimeSync.pushUpdate({
       records: updatedRecords,
       notifications: updatedNotifications
@@ -458,28 +459,27 @@ export default function App() {
   };
 
   // Handler: Add New Vehicle
-  const handleAddVehicle = (newUnit: VehicleUnit) => {
+  const handleAddVehicle = (newVeh: VehicleUnit) => {
     let updated: VehicleUnit[] = [];
     setVehicles(prev => {
-      updated = [newUnit, ...prev];
+      updated = [...prev, newVeh];
+      localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(updated));
+      return updated;
+    });
+    realtimeSync.pushUpdate({ vehicles: updated });
+    playTriggerSound();
+  };
+
+  const handleUpdateVehicle = (updatedVeh: VehicleUnit) => {
+    let updated: VehicleUnit[] = [];
+    setVehicles(prev => {
+      updated = prev.map(v => (v.id === updatedVeh.id ? updatedVeh : v));
       localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(updated));
       return updated;
     });
     realtimeSync.pushUpdate({ vehicles: updated });
   };
 
-  // Handler: Update Vehicle
-  const handleUpdateVehicle = (updatedUnit: VehicleUnit) => {
-    let updated: VehicleUnit[] = [];
-    setVehicles(prev => {
-      updated = prev.map(v => (v.id === updatedUnit.id ? updatedUnit : v));
-      localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(updated));
-      return updated;
-    });
-    realtimeSync.pushUpdate({ vehicles: updated });
-  };
-
-  // Handler: Delete Vehicle
   const handleDeleteVehicle = (unitId: string) => {
     let updated: VehicleUnit[] = [];
     setVehicles(prev => {
@@ -533,32 +533,24 @@ export default function App() {
     realtimeSync.pushUpdate({ settings: newSettings });
   };
 
-  // Reset Demo Data
-  const handleResetDemoData = () => {
-    if (confirm('Reset seluruh data aplikasi ke sampel awal?')) {
-      setVehicles(INITIAL_VEHICLES);
-      setP2hRecords(INITIAL_P2H_RECORDS);
-      setMaintenanceLogs(INITIAL_MAINTENANCE_LOGS);
-      setAllUsers(INITIAL_ACCOUNTS);
-      setCurrentUser(INITIAL_ACCOUNTS[0]);
-      setSettings(DEFAULT_SETTINGS);
-      setNotifications(INITIAL_NOTIFICATIONS);
+  // Reset Demo Data / Clear All Data
+  const handleClearData = () => {
+    if (confirm('Apakah Anda yakin ingin menghapus SEMUA data? Aplikasi akan di-reset ke status kosong (Admin tetap tersimpan).')) {
       localStorage.clear();
-      setIsLoggedIn(true);
-      setActiveNav('p2h');
-      setEditingForm(null);
-
-      realtimeSync.pushUpdate({
-        vehicles: INITIAL_VEHICLES,
-        records: INITIAL_P2H_RECORDS,
-        users: INITIAL_ACCOUNTS,
-        settings: DEFAULT_SETTINGS,
-        notifications: INITIAL_NOTIFICATIONS
-      });
+      setVehicles([]);
+      setP2hRecords([]);
+      setMaintenanceLogs([]);
+      setAllUsers([DEFAULT_ADMIN_USER]);
+      setCurrentUser(DEFAULT_ADMIN_USER);
+      setSettings(DEFAULT_SETTINGS);
+      setNotifications([]);
+      alert('Data berhasil dihapus.');
+      setActiveNav('dashboard');
     }
   };
 
-  // 1. If not logged in, render the Simplified Main Login Page (Requirement 4 & 5)
+
+  // 1. If not logged in, render the Simplified Main Login Page
   if (!isLoggedIn) {
     return (
       <LoginView
@@ -581,78 +573,314 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#f8f9fa] text-slate-700 font-sans antialiased relative selection:bg-blue-600 selection:text-white">
       
-      {/* FULL GLOSSY GLASS HEADER */}
-      <header 
-        className="sticky top-0 z-50 text-white backdrop-blur-2xl bg-slate-900/85 border-b border-white/20 shadow-2xl transition-all font-sans"
-        style={{ backgroundColor: settings.primaryColor ? `${settings.primaryColor}E6` : undefined }}
-      >
-        {/* Isolated glossy glass ambient highlights */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-sky-500/20 via-white/10 to-indigo-500/20" />
-          <div className="absolute -top-12 -left-10 w-96 h-28 bg-white/20 rounded-full blur-2xl transform -rotate-6" />
-          <div className="absolute -bottom-8 right-20 w-80 h-24 bg-white/10 rounded-full blur-xl" />
-          <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent" />
-        </div>
+      {/* 1. CREATIVE TIM SOFT UI SIDENAV (SIDEBAR NAVIGATION) */}
+      {/* Mobile Backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 xl:hidden transition-opacity"
+        />
+      )}
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4 relative z-10">
-          
-          {/* Brand Wordmark & Custom Logo */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            {settings.logoUrl ? (
-              <img 
-                src={settings.logoUrl} 
-                alt="Logo" 
-                className="h-8 max-w-28 object-contain filter drop-shadow-md" 
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-xl bg-white/25 backdrop-blur-md border border-white/40 text-white flex items-center justify-center font-black text-sm tracking-widest shadow-md">
-                JAC
+      {/* Sidenav Container */}
+      <aside className={`fixed inset-y-0 left-0 my-4 ml-4 w-64 rounded-2xl bg-white shadow-soft-xl border-0 p-4 z-50 flex flex-col justify-between transition-transform duration-300 xl:translate-x-0 ${
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="flex flex-col h-full justify-between">
+          <div>
+            {/* Sidenav Brand Header */}
+            <div className="flex items-center justify-between px-2 py-3">
+              <div className="flex items-center gap-3">
+                {settings.logoUrl ? (
+                  <img src={settings.logoUrl} alt="Logo" className="h-8 max-w-28 object-contain" />
+                ) : (
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tl from-blue-700 to-cyan-500 shadow-soft-2xl flex items-center justify-center text-white font-black text-sm shrink-0">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                )}
+                <div className="leading-tight">
+                  <span className="font-extrabold text-sm text-slate-800 tracking-tight block">
+                    {settings.appTitle || 'JAC T9 EV'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-semibold font-mono block">
+                    {settings.companyName || 'PT MULIABARA'}
+                  </span>
+                </div>
               </div>
-            )}
-            <a 
-              href="#" 
-              onClick={(e) => { e.preventDefault(); setActiveNav('dashboard'); setEditingForm(null); }} 
-              className="text-sm sm:text-base font-extrabold tracking-tight text-white drop-shadow-xs whitespace-nowrap"
-            >
-              {settings.appTitle} 
-              <span className="font-medium text-white/80 text-xs hidden sm:inline ml-1.5">
-                · {settings.companyName}
-              </span>
-            </a>
+
+              {/* Mobile Close Button */}
+              <button 
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 xl:hidden rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <hr className="h-px my-3 bg-gradient-to-r from-transparent via-slate-200 to-transparent border-0" />
+
+            {/* Sidenav Links */}
+            <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-22rem)] py-1 pr-1">
+              
+              {/* Group 1: PAGES & OPERASIONAL */}
+              <div>
+                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider px-3 block mb-2 font-mono">
+                  DASHBOARD & OPERASIONAL
+                </span>
+                <ul className="space-y-1">
+                  {/* Dashboard */}
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveNav('dashboard'); setEditingForm(null); setIsMobileMenuOpen(false); }}
+                      className={`w-full flex items-center px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        activeNav === 'dashboard'
+                          ? 'bg-white shadow-soft-xl text-slate-800'
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 shadow-soft-2xl shrink-0 ${
+                        activeNav === 'dashboard'
+                          ? 'bg-gradient-to-tl from-blue-700 to-cyan-500 text-white'
+                          : 'bg-white shadow-soft-sm text-slate-700'
+                      }`}>
+                        <BarChart3 className="w-4 h-4" />
+                      </div>
+                      <span>Dashboard Telemetri</span>
+                    </button>
+                  </li>
+
+                  {/* P2H Baru */}
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveNav('p2h'); setEditingForm(null); setIsMobileMenuOpen(false); }}
+                      className={`w-full flex items-center px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        activeNav === 'p2h'
+                          ? 'bg-white shadow-soft-xl text-slate-800'
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 shadow-soft-2xl shrink-0 ${
+                        activeNav === 'p2h'
+                          ? 'bg-gradient-to-tl from-slate-800 to-slate-900 text-white'
+                          : 'bg-white shadow-soft-sm text-slate-700'
+                      }`}>
+                        <ClipboardList className="w-4 h-4" />
+                      </div>
+                      <span>Formulir P2H Baru</span>
+                    </button>
+                  </li>
+
+                  {/* Log P2H */}
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveNav('log'); setEditingForm(null); setIsMobileMenuOpen(false); }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        activeNav === 'log'
+                          ? 'bg-white shadow-soft-xl text-slate-800'
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 shadow-soft-2xl shrink-0 ${
+                          activeNav === 'log'
+                            ? 'bg-gradient-to-tl from-emerald-600 to-teal-400 text-white'
+                            : 'bg-white shadow-soft-sm text-slate-700'
+                        }`}>
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <span>Log & Arsip P2H</span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                        {p2hRecords.length}
+                      </span>
+                    </button>
+                  </li>
+
+                  {/* Log Charging */}
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveNav('charging_log'); setEditingForm(null); setIsMobileMenuOpen(false); }}
+                      className={`w-full flex items-center px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        activeNav === 'charging_log'
+                          ? 'bg-white shadow-soft-xl text-slate-800'
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 shadow-soft-2xl shrink-0 ${
+                        activeNav === 'charging_log'
+                          ? 'bg-gradient-to-tl from-amber-500 to-orange-400 text-white'
+                          : 'bg-white shadow-soft-sm text-slate-700'
+                      }`}>
+                        <BatteryCharging className="w-4 h-4" />
+                      </div>
+                      <span>Log EV Charging</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Group 2: ARMADA & MANAJEMEN */}
+              <div>
+                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider px-3 block mb-2 font-mono">
+                  ARMADA & MANAJEMEN
+                </span>
+                <ul className="space-y-1">
+                  {/* Daftar Unit */}
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveNav('units'); setEditingForm(null); setIsMobileMenuOpen(false); }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        activeNav === 'units'
+                          ? 'bg-white shadow-soft-xl text-slate-800'
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 shadow-soft-2xl shrink-0 ${
+                          activeNav === 'units'
+                            ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white'
+                            : 'bg-white shadow-soft-sm text-slate-700'
+                        }`}>
+                          <Truck className="w-4 h-4" />
+                        </div>
+                        <span>Daftar Unit Fleet</span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                        {vehicles.length}
+                      </span>
+                    </button>
+                  </li>
+
+                  {/* Akun */}
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveNav('account'); setEditingForm(null); setIsMobileMenuOpen(false); }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        activeNav === 'account'
+                          ? 'bg-white shadow-soft-xl text-slate-800'
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 shadow-soft-2xl shrink-0 ${
+                          activeNav === 'account'
+                            ? 'bg-gradient-to-tl from-rose-500 to-pink-500 text-white'
+                            : 'bg-white shadow-soft-sm text-slate-700'
+                        }`}>
+                          <User className="w-4 h-4" />
+                        </div>
+                        <span>Profil & Hak Akses</span>
+                      </div>
+                      {isAdmin && (
+                        <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.5 rounded uppercase font-mono">
+                          Admin
+                        </span>
+                      )}
+                    </button>
+                  </li>
+
+                  {/* Pengaturan (Admin) */}
+                  {isAdmin && (
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => { setActiveNav('settings'); setEditingForm(null); setIsMobileMenuOpen(false); }}
+                        className={`w-full flex items-center px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                          activeNav === 'settings'
+                            ? 'bg-white shadow-soft-xl text-slate-800'
+                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 shadow-soft-2xl shrink-0 ${
+                          activeNav === 'settings'
+                            ? 'bg-gradient-to-tl from-slate-600 to-slate-800 text-white'
+                            : 'bg-white shadow-soft-sm text-slate-700'
+                        }`}>
+                          <Cog className="w-4 h-4" />
+                        </div>
+                        <span>Pengaturan Sistem</span>
+                      </button>
+                    </li>
+                  )}
+                </ul>
+              </div>
+
+            </div>
           </div>
 
-          {/* Right Action Icons */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Sidenav Bottom Help Widget Card (Creative Tim style) */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-tl from-slate-900 via-slate-800 to-slate-900 text-white shadow-soft-xl relative overflow-hidden mt-3">
+            <div className="relative z-10 space-y-2">
+              <div className="w-8 h-8 rounded-lg bg-white/15 text-white flex items-center justify-center backdrop-blur-md">
+                <Zap className="w-4 h-4 text-cyan-300" />
+              </div>
+              <div>
+                <span className="font-bold text-xs block text-white">CATL LFP 88.02 kWh</span>
+                <span className="text-[10px] text-slate-300 block">JAC T9 EV 4x4 Double Cabin</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setActiveNav('p2h'); setEditingForm(null); setIsMobileMenuOpen(false); }}
+                className="w-full py-1.5 px-3 rounded-lg bg-white text-slate-900 font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer shadow-soft-sm text-center block"
+              >
+                + Buat P2H Baru
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* 2. MAIN CONTENT CANVAS (SHIFTED ON DESKTOP VIA xl:ml-72) */}
+      <div className="xl:ml-72 min-h-screen p-4 xl:p-6 flex flex-col justify-between transition-all duration-300">
+        
+        {/* TOP FLOATING GLASSMORPHIC NAVBAR (Soft UI Navbar) */}
+        <nav className="sticky top-4 z-30 mb-6 bg-white/80 backdrop-blur-md rounded-2xl shadow-soft-sm border border-white/60 p-3 sm:p-4 flex items-center justify-between gap-3">
+          
+          {/* Left: Breadcrumbs & Page Title */}
+          <div>
+            <nav aria-label="breadcrumb">
+              <ol className="flex flex-wrap pt-0 mr-12 bg-transparent rounded-lg sm:mr-16 text-slate-400 text-xs">
+                <li className="leading-normal">
+                  <a href="#" onClick={(e) => { e.preventDefault(); setActiveNav('dashboard'); }} className="opacity-50 hover:opacity-100 text-slate-700">Pages</a>
+                </li>
+                <li className="text-xs pl-2 capitalize leading-normal text-slate-700 before:float-left before:pr-2 before:text-slate-400 before:content-['/']" aria-current="page">
+                  {NAV_LABELS[activeNav] || activeNav}
+                </li>
+              </ol>
+              <h6 className="mb-0 font-bold capitalize text-slate-800 text-sm sm:text-base tracking-tight">
+                {NAV_LABELS[activeNav] || activeNav}
+              </h6>
+            </nav>
+          </div>
+
+          {/* Right: Actions, Cloud Sync, Bell & Profile */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            
             {/* Realtime Status Indicator & Manual Sync Button */}
             <button
               type="button"
-              onClick={async () => {
-                setIsManualSyncing(true);
-                await realtimeSync.forceSyncNow({
-                  records: p2hRecords,
-                  vehicles: vehicles,
-                  users: allUsers,
-                  notifications: notifications,
-                  settings: settings
-                });
-                setTimeout(() => {
-                  setIsManualSyncing(false);
-                }, 800);
-              }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono shadow-2xs backdrop-blur-md border cursor-pointer transition-all ${
+              onClick={handleForceSync}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono shadow-soft-xxs border cursor-pointer transition-all ${
                 syncStatus === 'connected'
-                  ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-white border-emerald-400/40'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                   : syncStatus === 'syncing' || isManualSyncing
-                  ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-400/40'
-                  : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border-rose-400/40'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                  : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
               }`}
               title={`Status Cloud Sync: ${syncStatus === 'connected' ? 'Aktif (Real-Time)' : syncStatus} · Terakhir: ${lastSyncTime || 'Baru saja'}. Klik untuk sinkronisasi paksa.`}
             >
-              <RefreshCw className={`w-3 h-3 ${isManualSyncing || syncStatus === 'syncing' ? 'animate-spin text-amber-300' : 'text-emerald-400'}`} />
-              <span className="font-bold hidden xs:inline">
-                {isManualSyncing ? 'Menyinkronkan...' : syncStatus === 'connected' ? 'Sync Aktif' : 'Offline'}
+              <RefreshCw className={`w-3.5 h-3.5 ${isManualSyncing || syncStatus === 'syncing' ? 'animate-spin text-amber-600' : 'text-emerald-600'}`} />
+              <span className="font-bold hidden sm:inline">
+                {isManualSyncing ? 'Syncing...' : syncStatus === 'connected' ? 'Cloud Sync' : 'Offline'}
               </span>
             </button>
 
@@ -679,391 +907,153 @@ export default function App() {
               }}
             />
 
-            {/* Current User Pill Badge */}
+            {/* User Profile Pill Badge */}
             <button
               onClick={() => setActiveNav('account')}
-              className="flex items-center gap-1.5 p-1 pl-1.5 pr-2.5 bg-white/20 hover:bg-white/30 border border-white/30 backdrop-blur-md rounded-full transition-all text-xs text-left cursor-pointer shadow-xs"
+              className="flex items-center gap-2 p-1.5 pl-2 pr-3 bg-white border border-slate-200 shadow-soft-xxs rounded-xl transition-all text-xs text-left cursor-pointer hover:bg-slate-50"
               title={`Masuk sebagai: ${activeUser.name} (@${activeUser.username || activeUser.nik})`}
             >
-              <div className="w-6 h-6 rounded-full bg-white text-slate-900 font-extrabold text-[10px] flex items-center justify-center shadow-xs shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tl from-blue-700 to-cyan-500 text-white font-extrabold text-[10px] flex items-center justify-center shadow-soft-sm shrink-0">
                 {(activeUser.name || 'Admin').split(' ').map(n => n[0]).slice(0, 2).join('')}
               </div>
-              <div className="hidden sm:block">
-                <span className="font-bold text-white block text-[11px] leading-tight truncate max-w-20">
+              <div className="hidden md:block">
+                <span className="font-bold text-slate-800 block text-xs leading-tight truncate max-w-28">
                   {activeUser.name}
                 </span>
-                <span className="text-[9px] text-white/80 font-mono block leading-tight uppercase font-medium">
+                <span className="text-[9px] text-slate-400 font-mono block leading-tight uppercase font-bold">
                   {activeUser.role}
                 </span>
               </div>
             </button>
 
-            {/* Keluar / Logout Button */}
+            {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold bg-white/15 hover:bg-rose-500/80 border border-white/25 text-white rounded-xl transition-colors shadow-xs cursor-pointer backdrop-blur-md"
+              className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/80 rounded-xl transition-colors shadow-soft-xxs cursor-pointer bg-white"
               title="Keluar dari Aplikasi (Logout)"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline text-[11px]">Keluar</span>
+              <LogOut className="w-4 h-4" />
             </button>
-          </div>
-        </div>
-      </header>
 
-      {/* GLOSSY SUB-HEADER NAVIGATION BAR WITH DASHBOARD DROPDOWN */}
-      <nav className="sticky top-16 z-40 bg-slate-900/90 backdrop-blur-2xl border-b border-white/20 shadow-xl transition-all font-sans">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 relative">
-          
-          {/* Main Dashboard Dropdown Button Container */}
-          <div className="relative">
+            {/* Mobile Hamburger Toggle Button */}
             <button
               type="button"
-              onClick={() => {
-                setActiveNav('dashboard');
-                setIsDashboardMenuOpen(!isDashboardMenuOpen);
-              }}
-              className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-md ${
-                isDashboardMenuOpen || activeNav === 'dashboard'
-                  ? 'bg-sky-600 text-white shadow-sky-600/50 border border-sky-400'
-                  : 'bg-white/15 hover:bg-white/25 text-white border border-white/25'
-              }`}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 text-slate-700 hover:bg-slate-100 rounded-xl xl:hidden cursor-pointer shadow-soft-xxs border border-slate-200 bg-white"
+              title="Buka Navigasi"
             >
-              <BarChart3 className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-sky-300 shrink-0" />
-              <span className="sm:hidden font-bold">Dashboard</span>
-              <span className="hidden sm:inline">Dashboard & Menu Navigasi</span>
-              <ChevronDown className={`w-3 sm:w-3.5 h-3 sm:h-3.5 transition-transform duration-200 ${isDashboardMenuOpen ? 'rotate-180 text-amber-300' : 'text-white/80'}`} />
+              <Menu className="w-5 h-5" />
             </button>
-
-            {/* Glossy Glass Dropdown Menu containing ALL navigation icons */}
-            {isDashboardMenuOpen && (
-              <div className="absolute left-0 mt-2 w-72 sm:w-80 bg-slate-900/95 backdrop-blur-2xl border border-white/20 rounded-2xl p-3 shadow-2xl z-50 animate-fade-in text-xs font-semibold space-y-1.5">
-                <div className="px-2 py-1 border-b border-white/10 mb-1 flex items-center justify-between text-[10px] font-mono text-slate-400 font-bold uppercase">
-                  <span>Daftar Menu Navigasi</span>
-                  <span className="text-[9px] bg-sky-500/30 text-sky-300 px-2 py-0.5 rounded-full border border-sky-400/30">JAC T9 EV</span>
-                </div>
-
-                {/* 1. Dashboard Utama */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingForm(null);
-                    setActiveNav('dashboard');
-                    setIsDashboardMenuOpen(false);
-                  }}
-                  className={`w-full p-2.5 rounded-xl transition-all flex items-center justify-between cursor-pointer ${
-                    activeNav === 'dashboard'
-                      ? 'bg-sky-600 text-white font-bold shadow-md border border-sky-400'
-                      : 'text-white/90 hover:bg-white/10 bg-white/5 border border-white/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-sky-500/20 text-sky-300">
-                      <BarChart3 className="w-4 h-4" />
-                    </div>
-                    <div className="text-left">
-                      <span className="block font-bold">Dashboard Utama</span>
-                      <span className="text-[10px] text-white/60 font-normal">Ringkasan & Telemetri 3D</span>
-                    </div>
-                  </div>
-                  {activeNav === 'dashboard' && <span className="text-[9px] bg-white/20 px-2 py-0.5 rounded-full font-bold">Aktif</span>}
-                </button>
-
-                {/* 2. P2H */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingForm(null);
-                    setActiveNav('p2h');
-                    setIsDashboardMenuOpen(false);
-                  }}
-                  className={`w-full p-2.5 rounded-xl transition-all flex items-center justify-between cursor-pointer ${
-                    activeNav === 'p2h'
-                      ? 'bg-sky-600 text-white font-bold shadow-md border border-sky-400'
-                      : 'text-white/90 hover:bg-white/10 bg-white/5 border border-white/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-sky-500/20 text-sky-300">
-                      <ClipboardList className="w-4 h-4" />
-                    </div>
-                    <div className="text-left">
-                      <span className="block font-bold">P2H (Pemeriksaan Harian)</span>
-                      <span className="text-[10px] text-white/60 font-normal">Buat Inspeksi Driver Baru</span>
-                    </div>
-                  </div>
-                  {activeNav === 'p2h' && <span className="text-[9px] bg-white/20 px-2 py-0.5 rounded-full font-bold">Aktif</span>}
-                </button>
-
-                {/* 3. Log P2H */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveNav('log');
-                    setIsDashboardMenuOpen(false);
-                  }}
-                  className={`w-full p-2.5 rounded-xl transition-all flex items-center justify-between cursor-pointer ${
-                    activeNav === 'log'
-                      ? 'bg-sky-600 text-white font-bold shadow-md border border-sky-400'
-                      : 'text-white/90 hover:bg-white/10 bg-white/5 border border-white/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-sky-500/20 text-sky-300">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <div className="text-left">
-                      <span className="block font-bold">Log P2H</span>
-                      <span className="text-[10px] text-white/60 font-normal">Riwayat Inspeksi & Export PDF</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-sky-500 text-white font-mono px-2 py-0.5 rounded-full font-bold">
-                    {p2hRecords.length}
-                  </span>
-                </button>
-
-                {/* 4. Log Charging */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveNav('charging_log');
-                    setIsDashboardMenuOpen(false);
-                  }}
-                  className={`w-full p-2.5 rounded-xl transition-all flex items-center justify-between cursor-pointer ${
-                    activeNav === 'charging_log'
-                      ? 'bg-sky-600 text-white font-bold shadow-md border border-sky-400'
-                      : 'text-white/90 hover:bg-white/10 bg-white/5 border border-white/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
-                      <BatteryCharging className="w-4 h-4" />
-                    </div>
-                    <div className="text-left">
-                      <span className="block font-bold">Log Charging</span>
-                      <span className="text-[10px] text-white/60 font-normal">Riwayat Pengisian SPKLU EV</span>
-                    </div>
-                  </div>
-                  {activeNav === 'charging_log' && <span className="text-[9px] bg-white/20 px-2 py-0.5 rounded-full font-bold">Aktif</span>}
-                </button>
-
-                {/* 5. Daftar Unit */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveNav('units');
-                    setIsDashboardMenuOpen(false);
-                  }}
-                  className={`w-full p-2.5 rounded-xl transition-all flex items-center justify-between cursor-pointer ${
-                    activeNav === 'units'
-                      ? 'bg-sky-600 text-white font-bold shadow-md border border-sky-400'
-                      : 'text-white/90 hover:bg-white/10 bg-white/5 border border-white/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
-                      <Truck className="w-4 h-4" />
-                    </div>
-                    <div className="text-left">
-                      <span className="block font-bold">Daftar Unit</span>
-                      <span className="text-[10px] text-white/60 font-normal">Status & Manajemen Armada EV</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-amber-500 text-slate-900 font-mono px-2 py-0.5 rounded-full font-bold">
-                    {vehicles.length}
-                  </span>
-                </button>
-
-                {/* 6. Manajemen Akun */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveNav('account');
-                    setIsDashboardMenuOpen(false);
-                  }}
-                  className={`w-full p-2.5 rounded-xl transition-all flex items-center justify-between cursor-pointer ${
-                    activeNav === 'account'
-                      ? 'bg-sky-600 text-white font-bold shadow-md border border-sky-400'
-                      : 'text-white/90 hover:bg-white/10 bg-white/5 border border-white/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-300">
-                      {isAdmin ? <Shield className="w-4 h-4" /> : <User className="w-4 h-4" />}
-                    </div>
-                    <div className="text-left">
-                      <span className="block font-bold">{isAdmin ? 'Manajemen Akun' : 'Profil Akun'}</span>
-                      <span className="text-[10px] text-white/60 font-normal">Hak Akses & Otorisasi</span>
-                    </div>
-                  </div>
-                  {isAdmin && (
-                    <span className="text-[9px] bg-amber-400 text-slate-900 font-extrabold px-1.5 py-0.5 rounded uppercase">
-                      ADMIN
-                    </span>
-                  )}
-                </button>
-
-                {/* 7. Pengaturan (Admin Only) */}
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveNav('settings');
-                      setIsDashboardMenuOpen(false);
-                    }}
-                    className={`w-full p-2.5 rounded-xl transition-all flex items-center justify-between cursor-pointer ${
-                      activeNav === 'settings'
-                        ? 'bg-sky-600 text-white font-bold shadow-md border border-sky-400'
-                        : 'text-white/90 hover:bg-white/10 bg-white/5 border border-white/10'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-300">
-                        <Cog className="w-4 h-4" />
-                      </div>
-                      <div className="text-left">
-                        <span className="block font-bold">Pengaturan</span>
-                        <span className="text-[10px] text-white/60 font-normal">Konfigurasi Sistem</span>
-                      </div>
-                    </div>
-                    {activeNav === 'settings' && <span className="text-[9px] bg-white/20 px-2 py-0.5 rounded-full font-bold">Aktif</span>}
-                  </button>
-                )}
-              </div>
-            )}
           </div>
+        </nav>
 
-          {/* Quick Active Nav Badge Indicator */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-            <span className="text-[11px] font-bold text-white/70 whitespace-nowrap hidden sm:inline">Modul Aktif:</span>
-            <div className="px-3 py-1 rounded-full bg-sky-500/20 text-sky-200 border border-sky-400/30 text-xs font-bold font-mono whitespace-nowrap flex items-center gap-1.5 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              {activeNav === 'dashboard' && 'Dashboard Utama'}
-              {activeNav === 'p2h' && 'P2H (Pemeriksaan Harian)'}
-              {activeNav === 'log' && `Log P2H (${p2hRecords.length})`}
-              {activeNav === 'charging_log' && 'Log EV Charging'}
-              {activeNav === 'units' && `Daftar Unit (${vehicles.length})`}
-              {activeNav === 'account' && (isAdmin ? 'Manajemen Akun' : 'Profil Akun')}
-              {activeNav === 'settings' && 'Pengaturan'}
-            </div>
-          </div>
+        {/* MAIN BODY VIEW */}
+        <main className="w-full flex-1 space-y-6">
+          {/* 0. HALAMAN UTAMA DASHBOARD */}
+          {activeNav === 'dashboard' && (
+            <DashboardView
+              vehicles={vehicles}
+              records={p2hRecords}
+              settings={settings}
+              onNavigate={nav => setActiveNav(nav)}
+              onCreateP2H={() => {
+                setEditingForm(null);
+                setActiveNav('p2h');
+              }}
+            />
+          )}
 
-        </div>
-      </nav>
+          {/* 1. HALAMAN P2H */}
+          {activeNav === 'p2h' && (
+            <P2HFormEditor
+              vehicles={vehicles}
+              initialForm={editingForm}
+              currentUser={activeUser}
+              allUsers={allUsers}
+              onSave={handleSaveP2H}
+              onCancel={() => {
+                setEditingForm(null);
+                setActiveNav('log');
+              }}
+            />
+          )}
 
+          {/* 2. HALAMAN LOG P2H */}
+          {activeNav === 'log' && (
+            <P2HLogView
+              records={p2hRecords}
+              vehicles={vehicles}
+              settings={settings}
+              onEditRecord={record => {
+                setEditingForm(record);
+                setActiveNav('p2h');
+              }}
+              onDeleteRecord={handleDeleteP2H}
+              onPrintRecord={record => setPrintableForm(record)}
+              onDownloadPdfRecord={record => setPrintableForm(record)}
+              onCreateNew={() => {
+                setEditingForm(null);
+                setActiveNav('p2h');
+              }}
+            />
+          )}
 
+          {/* 2.5 HALAMAN LOG EV CHARGING */}
+          {activeNav === 'charging_log' && (
+            <ChargingLogView
+              records={p2hRecords}
+              vehicles={vehicles}
+              settings={settings}
+            />
+          )}
 
+          {/* 3. HALAMAN DAFTAR UNIT (CRUD) */}
+          {activeNav === 'units' && (
+            <UnitManagerView
+              vehicles={vehicles}
+              onAddVehicle={handleAddVehicle}
+              onUpdateVehicle={handleUpdateVehicle}
+              onDeleteVehicle={handleDeleteVehicle}
+            />
+          )}
 
+          {/* 4. HALAMAN MANAJEMEN AKUN */}
+          {activeNav === 'account' && (
+            <AccountProfileView
+              currentUser={activeUser}
+              allUsers={allUsers}
+              onSwitchUser={handleSwitchUser}
+              onAddUser={handleAddUser}
+              onUpdateUser={handleUpdateUser}
+              onDeleteUser={handleDeleteUser}
+            />
+          )}
 
-      {/* MAIN VIEWPORT */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1 w-full space-y-8">
-        
-        {/* 0. HALAMAN UTAMA DASHBOARD */}
-        {activeNav === 'dashboard' && (
-          <DashboardView
-            vehicles={vehicles}
-            records={p2hRecords}
-            settings={settings}
-            onNavigate={nav => setActiveNav(nav)}
-            onCreateP2H={() => {
-              setEditingForm(null);
-              setActiveNav('p2h');
-            }}
-          />
-        )}
+          {/* 5. HALAMAN PENGATURAN (KHUSUS ADMIN) */}
+          {activeNav === 'settings' && (
+            <SettingsView
+              settings={settings}
+              currentUser={activeUser}
+              onUpdateSettings={handleUpdateSettings}
+              onClearData={handleClearData}
+            />
+          )}
+        </main>
 
-        {/* 1. HALAMAN P2H (1 HALAMAN LENGKAP - PROFIL SESUAI AKUN LOGIN, REKOMENDASI MEKANIK TIDAK OTOMATIS, FOREMAN APPROVAL VIA LONCENG) */}
-        {activeNav === 'p2h' && (
-          <P2HFormEditor
-            vehicles={vehicles}
-            initialForm={editingForm}
-            currentUser={activeUser}
-            allUsers={allUsers}
-            onSave={handleSaveP2H}
-            onCancel={() => {
-              setEditingForm(null);
-              setActiveNav('log');
-            }}
-          />
-        )}
-
-        {/* 2. HALAMAN LOG P2H (DENGAN EDIT, DELETE & DOWNLOAD PDF) */}
-        {activeNav === 'log' && (
-          <P2HLogView
-            records={p2hRecords}
-            vehicles={vehicles}
-            settings={settings}
-            onEditRecord={record => {
-              setEditingForm(record);
-              setActiveNav('p2h');
-            }}
-            onDeleteRecord={handleDeleteP2H}
-            onPrintRecord={record => setPrintableForm(record)}
-            onDownloadPdfRecord={record => setPrintableForm(record)}
-            onCreateNew={() => {
-              setEditingForm(null);
-              setActiveNav('p2h');
-            }}
-          />
-        )}
-
-        {/* 2.5 HALAMAN LOG EV CHARGING */}
-        {activeNav === 'charging_log' && (
-          <ChargingLogView
-            records={p2hRecords}
-            vehicles={vehicles}
-            settings={settings}
-          />
-        )}
-
-        {/* 3. HALAMAN DAFTAR UNIT (CRUD) */}
-        {activeNav === 'units' && (
-          <UnitManagerView
-            vehicles={vehicles}
-            onAddVehicle={handleAddVehicle}
-            onUpdateVehicle={handleUpdateVehicle}
-            onDeleteVehicle={handleDeleteVehicle}
-          />
-        )}
-
-        {/* 4. HALAMAN MANAJEMEN AKUN */}
-        {activeNav === 'account' && (
-          <AccountProfileView
-            currentUser={activeUser}
-            allUsers={allUsers}
-            onSwitchUser={handleSwitchUser}
-            onAddUser={handleAddUser}
-            onUpdateUser={handleUpdateUser}
-            onDeleteUser={handleDeleteUser}
-          />
-        )}
-
-        {/* 5. HALAMAN PENGATURAN (KHUSUS ADMIN) */}
-        {activeNav === 'settings' && (
-          <SettingsView
-            settings={settings}
-            currentUser={activeUser}
-            onUpdateSettings={handleUpdateSettings}
-          />
-        )}
-      </main>
-
-      {/* FOOTER */}
-      <footer className="bg-white border-t border-slate-200 mt-auto py-5 no-print">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <div className="flex items-center gap-2 font-mono">
-            <span className="font-bold text-slate-800">{settings.appTitle}</span>
-            <span>·</span>
-            <span>{settings.companyName}</span>
-            <span>·</span>
-            <span>F-QHSE-OPS-MOB-09</span>
-          </div>
-
-          <p className="text-center sm:text-right text-[11px]">
-            Sistem Digital P2H Light Vehicle EV · Sinkronisasi Realtime PC & Ponsel · Keselamatan K3
+        {/* SOFT UI FOOTER */}
+        <footer className="mt-8 py-4 no-print text-center sm:text-left text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-slate-200/60">
+          <p className="mb-0">
+            © 2026, built with Creative Tim Soft UI style for <span className="font-bold text-slate-700">PT MULIABARA MINING</span> · JAC T9 EV Fleet
           </p>
-        </div>
-      </footer>
+          <div className="flex items-center gap-3 font-mono text-[11px] text-slate-400">
+            <span>F-QHSE-OPS-MOB-09</span>
+            <span>·</span>
+            <span>CATL 88.02 kWh</span>
+            <span>·</span>
+            <span>Site Kutai</span>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
